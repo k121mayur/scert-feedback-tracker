@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GraduationCap, User, Settings, Info } from "lucide-react";
+import { GraduationCap, User, Settings, Info, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TopicData {
@@ -159,10 +159,36 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="max-w-md mx-auto">
+                  {/* New Assessment System Button */}
+                  <div className="mb-6 text-center">
+                    <Button
+                      onClick={() => setLocation('/new-exam')}
+                      className="w-full max-w-md bg-accent hover:bg-accent/90 text-accent-foreground"
+                      size="lg"
+                    >
+                      <Calendar className="mr-2 h-5 w-5" />
+                      New Date-Based Assessment System
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Select from 50 topics across 10 dates (June 1-10, 2025) • 5 random questions from 12-question banks
+                    </p>
+                  </div>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">
+                        Or use legacy system
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="max-w-md mx-auto mt-6">
                     <div className="mb-6">
                       <label className="block text-sm font-medium text-foreground mb-2">
-                        Mobile Number
+                        Mobile Number (Legacy System)
                       </label>
                       <div className="relative">
                         <Input

@@ -141,9 +141,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const examSchema = z.object({
         topic_id: z.string(),
+        topic_name: z.string(),
         mobile: z.string().length(10),
-        batch_name: z.string(),
-        district: z.string(),
+        assessment_date: z.string(),
+        batch_name: z.string().optional().default("General"),
+        district: z.string().optional().default("General"),
         questions: z.array(z.string()),
         answers: z.array(z.string().nullable())
       });
@@ -151,13 +153,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = examSchema.parse(req.body);
       
       // Check if already submitted
-      const existingResult = await storage.getExamResult(data.mobile, data.topic_id);
+      const existingResult = await storage.checkExamExists(data.mobile, data.topic_id, data.assessment_date);
       if (existingResult) {
-        return res.status(400).json({ message: "Exam already submitted" });
+        return res.status(400).json({ message: "Exam already submitted for this date" });
       }
 
       // Get questions with correct answers
-      const questions = await storage.getQuestionsByTopic(data.topic_id, 10);
+      const questions = await storage.getRandomQuestionsByTopic(data.topic_id, 5);
       
       let correctCount = 0;
       let wrongCount = 0;
@@ -189,6 +191,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const examResult = await storage.submitExamResult({
         mobile: data.mobile,
         topicId: data.topic_id,
+        topicName: data.topic_name,
+        assessmentDate: data.assessment_date,
         batchName: data.batch_name,
         district: data.district,
         correctCount,
