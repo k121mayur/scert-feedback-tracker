@@ -39,6 +39,19 @@ export default function Feedback() {
     
     if (examResultData) {
       const parsedData = JSON.parse(examResultData);
+      
+      // Ensure mobile number exists before proceeding
+      if (!parsedData.mobile) {
+        console.error('No mobile number found in exam result data:', parsedData);
+        toast({
+          title: "Missing Information",
+          description: "Unable to access feedback without mobile number. Please start from exam.",
+          variant: "destructive",
+        });
+        setLocation('/');
+        return;
+      }
+      
       const feedbackInfo = {
         mobile: parsedData.mobile,
         topic: parsedData.topicName || parsedData.topic,
@@ -142,6 +155,17 @@ export default function Feedback() {
     try {
       const questionTexts = questions.map(q => q.feedbackQues);
       const feedbackAnswers = questions.map(q => answers[q.id]);
+
+      // Final validation before submission
+      if (!feedbackData.mobile) {
+        toast({
+          title: "Submission Error",
+          description: "Mobile number is required for feedback submission.",
+          variant: "destructive",
+        });
+        setSubmitting(false);
+        return;
+      }
 
       console.log('Feedback Data:', feedbackData);
       console.log('Submitting feedback with data:', {

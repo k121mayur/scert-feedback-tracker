@@ -135,7 +135,7 @@ class ExamQueue extends EventEmitter {
       // Submit individual answers
       await storage.submitExamAnswers(examAnswers);
 
-      // Update status to completed
+      // Update status to completed with all required data for feedback
       sessionCache.set(`exam_status_${item.id}`, { 
         status: 'completed',
         result: {
@@ -143,7 +143,14 @@ class ExamQueue extends EventEmitter {
           wrongCount,
           unansweredCount,
           totalQuestions: questions.length,
-          examId: examResult.id
+          examId: examResult.id,
+          // Include exam metadata for feedback flow
+          mobile: data.mobile,
+          topicId: data.topic_id,
+          topicName: data.topic_name,
+          assessmentDate: data.assessment_date,
+          batch: data.batch_name,
+          district: data.district
         },
         processedAt: new Date().toISOString()
       }, 3600);
