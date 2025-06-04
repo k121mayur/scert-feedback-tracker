@@ -1,74 +1,11 @@
-import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GraduationCap, User, Settings, Info, Calendar } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-
-interface TopicData {
-  success: boolean;
-  topic_id?: string;
-  batch_name?: string;
-  district?: string;
-  message?: string;
-}
 
 export default function Home() {
-  const [mobile, setMobile] = useState("");
-  const [topicData, setTopicData] = useState<TopicData | null>(null);
-  const [loading, setLoading] = useState(false);
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
-
-  const handleMobileChange = (value: string) => {
-    const numericValue = value.replace(/[^0-9]/g, '').slice(0, 10);
-    setMobile(numericValue);
-    
-    if (numericValue.length !== 10) {
-      setTopicData(null);
-    }
-  };
-
-  useEffect(() => {
-    if (mobile.length === 10) {
-      fetchTopicData();
-    }
-  }, [mobile]);
-
-  const fetchTopicData = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/topic-by-mobile/${mobile}`);
-      const data: TopicData = await response.json();
-      
-      setTopicData(data);
-      
-      if (!data.success) {
-        toast({
-          title: "Mobile Number Not Found",
-          description: data.message || "This mobile number is not registered for training.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching topic data:", error);
-      toast({
-        title: "Connection Error",
-        description: "Unable to verify mobile number. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStartExam = () => {
-    if (topicData && topicData.success) {
-      setLocation(`/exam?mobile=${mobile}&topic=${topicData.topic_id}&batch=${topicData.batch_name}&district=${topicData.district}`);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -166,75 +103,7 @@ export default function Home() {
               </Card>
             </section>
 
-            {/* Legacy Examination System - Secondary Section */}
-            <section id="exam" className="mb-12">
-              <Card className="max-w-2xl mx-auto material-shadow-2">
-                <CardHeader className="bg-muted text-muted-foreground rounded-t-lg">
-                  <CardTitle className="text-xl font-medium flex items-center">
-                    <GraduationCap className="mr-2" />
-                    Legacy Examination System
-                  </CardTitle>
-                  <p className="text-muted-foreground/80 mt-1">
-                    Traditional mobile-based assessment method
-                  </p>
-                </CardHeader>
-                
-                <CardContent className="p-6">
-                  <div className="space-y-6">
-                    <div>
-                      <label htmlFor="mobile" className="block text-sm font-medium text-foreground mb-2">
-                        Mobile Number
-                      </label>
-                      <Input
-                        id="mobile"
-                        type="tel"
-                        placeholder="Enter your 10-digit mobile number"
-                        value={mobile}
-                        onChange={(e) => handleMobileChange(e.target.value)}
-                        className="w-full"
-                        maxLength={10}
-                      />
-                      {mobile && mobile.length < 10 && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Please enter a complete 10-digit mobile number
-                        </p>
-                      )}
-                    </div>
 
-                    {loading && (
-                      <div className="text-center py-4">
-                        <p className="text-muted-foreground">Verifying mobile number...</p>
-                      </div>
-                    )}
-
-                    {topicData && topicData.success && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <h4 className="font-medium text-green-800 mb-2">Registration Found!</h4>
-                        <div className="text-sm text-green-700 space-y-1">
-                          <p><span className="font-medium">Topic:</span> {topicData.topic_id}</p>
-                          <p><span className="font-medium">Batch:</span> {topicData.batch_name}</p>
-                          <p><span className="font-medium">District:</span> {topicData.district}</p>
-                        </div>
-                        <Button 
-                          onClick={handleStartExam}
-                          className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          Start Legacy Examination
-                        </Button>
-                      </div>
-                    )}
-
-                    {mobile.length === 10 && !loading && !topicData?.success && (
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                        <p className="text-amber-800 text-sm">
-                          Mobile number not found in the system. Please try the New Date-Based Assessment System above.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
 
             {/* Demo Testing Information Section */}
             <section className="mb-12">
