@@ -236,47 +236,91 @@ export default function Home() {
               </Card>
             </section>
 
-            {/* Demo Numbers Section - Moved to Bottom */}
+            {/* Demo Testing Information Section */}
             <section className="mb-12">
-              <Card className="max-w-2xl mx-auto">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center">
+              <Card className="max-w-4xl mx-auto">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-t-lg">
+                  <CardTitle className="text-xl flex items-center text-blue-900 dark:text-blue-100">
                     <Info className="mr-2 h-5 w-5" />
                     Demo Testing Information
                   </CardTitle>
+                  <p className="text-blue-700 dark:text-blue-300 text-sm mt-1">
+                    Test the assessment system with these demo mobile numbers
+                  </p>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+                <CardContent className="p-6">
+                  <div className="space-y-6">
                     <div>
-                      <h4 className="font-medium text-foreground mb-2">Legacy System Demo Numbers</h4>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Use these mobile numbers to test the legacy examination system:
+                      <h4 className="font-semibold text-foreground mb-3 flex items-center">
+                        <Calendar className="mr-2 h-4 w-4 text-primary" />
+                        Date-Based Assessment System Demo Numbers
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Use these mobile numbers to test the new date-based assessment system. Each number is registered across multiple assessment dates with different topics.
                       </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="flex items-center justify-between p-3 bg-muted rounded border">
-                          <span className="font-mono text-sm">9876543210</span>
-                          <span className="text-xs text-muted-foreground">Math Topic</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 rounded-lg border border-green-200 dark:border-green-800">
+                          <div className="font-mono text-lg font-bold text-green-800 dark:text-green-200">9876543210</div>
+                          <div className="text-xs text-green-600 dark:text-green-400 mt-1">Mumbai District</div>
+                          <div className="text-xs text-green-600 dark:text-green-400">BATCH_MUM_001</div>
                         </div>
-                        <div className="flex items-center justify-between p-3 bg-muted rounded border">
-                          <span className="font-mono text-sm">9876543211</span>
-                          <span className="text-xs text-muted-foreground">Science Topic</span>
+                        <div className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                          <div className="font-mono text-lg font-bold text-blue-800 dark:text-blue-200">9876543211</div>
+                          <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">Pune District</div>
+                          <div className="text-xs text-blue-600 dark:text-blue-400">BATCH_PUN_002</div>
                         </div>
-                        <div className="flex items-center justify-between p-3 bg-muted rounded border">
-                          <span className="font-mono text-sm">9876543212</span>
-                          <span className="text-xs text-muted-foreground">English Topic</span>
+                        <div className="p-4 bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950 dark:to-violet-950 rounded-lg border border-purple-200 dark:border-purple-800">
+                          <div className="font-mono text-lg font-bold text-purple-800 dark:text-purple-200">9876543212</div>
+                          <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">Nashik District</div>
+                          <div className="text-xs text-purple-600 dark:text-purple-400">BATCH_NAS_003</div>
                         </div>
-                        <div className="flex items-center justify-between p-3 bg-muted rounded border">
-                          <span className="font-mono text-sm">9876543213</span>
-                          <span className="text-xs text-muted-foreground">History Topic</span>
+                        <div className="p-4 bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 rounded-lg border border-orange-200 dark:border-orange-800">
+                          <div className="font-mono text-lg font-bold text-orange-800 dark:text-orange-200">9876543213</div>
+                          <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">Nagpur District</div>
+                          <div className="text-xs text-orange-600 dark:text-orange-400">BATCH_NAG_004</div>
+                        </div>
+                        <div className="p-4 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-950 dark:to-cyan-950 rounded-lg border border-teal-200 dark:border-teal-800">
+                          <div className="font-mono text-lg font-bold text-teal-800 dark:text-teal-200">9876543214</div>
+                          <div className="text-xs text-teal-600 dark:text-teal-400 mt-1">Aurangabad District</div>
+                          <div className="text-xs text-teal-600 dark:text-teal-400">BATCH_AUR_005</div>
+                        </div>
+                        <div className="p-4 bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950 dark:to-rose-950 rounded-lg border border-pink-200 dark:border-pink-800">
+                          <div className="font-mono text-lg font-bold text-pink-800 dark:text-pink-200">9876543215</div>
+                          <div className="text-xs text-pink-600 dark:text-pink-400 mt-1">Kolhapur District</div>
+                          <div className="text-xs text-pink-600 dark:text-pink-400">BATCH_KOL_006</div>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="pt-3 border-t">
-                      <h4 className="font-medium text-foreground mb-2">Recommended Approach</h4>
-                      <p className="text-sm text-muted-foreground">
-                        For the best experience, use the <strong>New Date-Based Assessment System</strong> above. 
-                        It provides enhanced features, better tracking, and supports 40,000 concurrent users.
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <h5 className="font-medium text-foreground mb-2">How to Test</h5>
+                          <ul className="text-sm text-muted-foreground space-y-1">
+                            <li>• Use any demo number in the Date-Based Assessment System</li>
+                            <li>• Select from multiple available assessment dates</li>
+                            <li>• Choose from various subject topics per date</li>
+                            <li>• Experience the complete 5-question assessment</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <h5 className="font-medium text-foreground mb-2">System Features</h5>
+                          <ul className="text-sm text-muted-foreground space-y-1">
+                            <li>• Date-based topic organization</li>
+                            <li>• Admin assessment control panel</li>
+                            <li>• Real-time progress tracking</li>
+                            <li>• Comprehensive result analytics</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <h5 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Recommended Testing Approach</h5>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        Start with the <strong>Date-Based Assessment System</strong> using any demo number above. 
+                        This system supports 40,000 concurrent users and provides the most comprehensive testing experience 
+                        with advanced admin controls and detailed analytics.
                       </p>
                     </div>
                   </div>
