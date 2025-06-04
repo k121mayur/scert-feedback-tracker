@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import NewExam from "@/pages/new-exam";
 import Exam from "@/pages/exam";
 import Results from "@/pages/results";
+import Processing from "@/pages/processing";
 import Feedback from "@/pages/feedback";
 import Admin from "@/pages/admin";
 import TeacherDetails from "@/pages/teacher-details";
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/new-exam" component={NewExam} />
       <Route path="/exam" component={Exam} />
       <Route path="/results" component={Results} />
+      <Route path="/processing" component={Processing} />
       <Route path="/feedback" component={Feedback} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/teacher-details" component={TeacherDetails} />

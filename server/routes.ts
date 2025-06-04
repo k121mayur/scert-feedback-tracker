@@ -1,9 +1,38 @@
-import type { Express, Request } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { examQueue } from "./queue";
 import { z } from "zod";
 import multer from "multer";
 import { parse } from "csv-parse";
+
+// Rate limiting middleware for high-load scenarios
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+
+const rateLimit = (maxRequests: number, windowMs: number) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const clientId = req.ip || 'unknown';
+    const now = Date.now();
+    const windowStart = now - windowMs;
+    
+    // Clean up old entries
+    const current = rateLimitStore.get(clientId);
+    if (!current || current.resetTime < windowStart) {
+      rateLimitStore.set(clientId, { count: 1, resetTime: now + windowMs });
+      return next();
+    }
+    
+    if (current.count >= maxRequests) {
+      return res.status(429).json({ 
+        message: "Too many requests. Please try again later.",
+        retryAfter: Math.ceil((current.resetTime - now) / 1000)
+      });
+    }
+    
+    current.count++;
+    next();
+  };
+};
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -136,8 +165,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Submit exam answers
-  app.post("/api/submit-exam", async (req, res) => {
+  // Submit exam answers (ASYNC processing for 40K users)
+  app.post("/api/submit-exam", rateLimit(10, 60000), async (req, res) => {
     try {
       const examSchema = z.object({
         topic_id: z.string(),
@@ -152,70 +181,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const data = examSchema.parse(req.body);
       
-      // Check if already submitted
+      // Quick duplicate check with cache
       const existingResult = await storage.checkExamExists(data.mobile, data.topic_id, data.assessment_date);
       if (existingResult) {
         return res.status(400).json({ message: "Exam already submitted for this date" });
       }
 
-      // Get questions with correct answers
-      const questions = await storage.getRandomQuestionsByTopic(data.topic_id, 5);
-      
-      let correctCount = 0;
-      let wrongCount = 0;
-      let unansweredCount = 0;
-      
-      const examAnswers = questions.map((question, index) => {
-        const selectedAnswer = data.answers[index];
-        const isCorrect = selectedAnswer === question.correctAnswer;
-        
-        if (!selectedAnswer) {
-          unansweredCount++;
-        } else if (isCorrect) {
-          correctCount++;
-        } else {
-          wrongCount++;
-        }
-        
-        return {
-          mobile: data.mobile,
-          topicId: data.topic_id,
-          question: question.question,
-          selectedAnswer: selectedAnswer || null,
-          correctAnswer: question.correctAnswer,
-          isCorrect
-        };
-      });
+      // ASYNC PROCESSING: Add to queue instead of blocking
+      const examId = examQueue.enqueue(data);
 
-      // Submit exam result
-      const examResult = await storage.submitExamResult({
-        mobile: data.mobile,
-        topicId: data.topic_id,
-        topicName: data.topic_name,
-        assessmentDate: data.assessment_date,
-        batchName: data.batch_name,
-        district: data.district,
-        correctCount,
-        wrongCount,
-        unansweredCount,
-        totalQuestions: questions.length
-      });
-
-      // Submit individual answers
-      await storage.submitExamAnswers(examAnswers);
-
+      // Return immediately with processing ID
       res.json({
         success: true,
-        result: {
-          correctCount,
-          wrongCount,
-          unansweredCount,
-          totalQuestions: questions.length,
-          examId: examResult.id
-        }
+        processing: true,
+        examId: examId,
+        message: "Exam submitted for processing. Check status using the exam ID.",
+        statusEndpoint: `/api/exam-status/${examId}`
       });
     } catch (error) {
       console.error("Error submitting exam:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Check exam processing status
+  app.get("/api/exam-status/:examId", async (req, res) => {
+    try {
+      const { examId } = req.params;
+      const status = examQueue.getStatus(examId);
+      
+      if (!status) {
+        return res.status(404).json({ message: "Exam ID not found" });
+      }
+
+      res.json(status);
+    } catch (error) {
+      console.error("Error checking exam status:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

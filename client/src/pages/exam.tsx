@@ -192,18 +192,35 @@ export default function Exam() {
       const result = await response.json();
 
       if (result.success) {
-        // Store results in sessionStorage for results page
-        sessionStorage.setItem('examResult', JSON.stringify({
-          ...result.result,
-          mobile: examData?.mobile,
-          topic: examData?.topicId || examData?.topic,
-          topicName: examData?.topicName || examData?.topic,
-          assessmentDate: examData?.date || new Date().toISOString().split('T')[0],
-          batch: examData?.batch || "General",
-          district: examData?.district || "General",
-        }));
-        
-        setLocation('/results');
+        if (result.processing) {
+          // ASYNC PROCESSING: Store exam ID and poll for status
+          sessionStorage.setItem('examProcessing', JSON.stringify({
+            examId: result.examId,
+            mobile: examData?.mobile,
+            topic: examData?.topicId || examData?.topic,
+            topicName: examData?.topicName || examData?.topic,
+            assessmentDate: examData?.date || new Date().toISOString().split('T')[0],
+            batch: examData?.batch || "General",
+            district: examData?.district || "General",
+            submittedAt: new Date().toISOString()
+          }));
+          
+          // Navigate to processing status page
+          setLocation('/processing');
+        } else {
+          // Legacy synchronous result
+          sessionStorage.setItem('examResult', JSON.stringify({
+            ...result.result,
+            mobile: examData?.mobile,
+            topic: examData?.topicId || examData?.topic,
+            topicName: examData?.topicName || examData?.topic,
+            assessmentDate: examData?.date || new Date().toISOString().split('T')[0],
+            batch: examData?.batch || "General",
+            district: examData?.district || "General",
+          }));
+          
+          setLocation('/results');
+        }
       } else {
         toast({
           title: "Submission Failed",
