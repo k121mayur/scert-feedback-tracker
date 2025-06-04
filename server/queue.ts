@@ -93,6 +93,14 @@ class ExamQueue extends EventEmitter {
       return;
     }
 
+    // Check database health before processing
+    const isDbHealthy = await checkDatabaseHealth();
+    if (!isDbHealthy) {
+      console.log('Database unhealthy, skipping processing cycle');
+      this.recordResult(false);
+      return;
+    }
+
     const item = this.queue.shift();
     if (!item) return;
 
