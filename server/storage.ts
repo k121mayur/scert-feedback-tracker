@@ -2,7 +2,7 @@ import { db } from "./db";
 import { eq, and, gte, sql, desc, count } from "drizzle-orm";
 import {
   users, teachers, batches, batchTeachers, questions, feedbackQuestions,
-  examResults, examAnswers, trainerFeedback, topicFeedback,
+  examResults, examAnswers, trainerFeedback, topicFeedback, assessmentSchedules,
   type User, type InsertUser,
   type Teacher, type InsertTeacher,
   type Batch, type InsertBatch,
@@ -13,6 +13,7 @@ import {
   type ExamAnswer, type InsertExamAnswer,
   type TrainerFeedback, type InsertTrainerFeedback,
   type TopicFeedback, type InsertTopicFeedback,
+  type AssessmentSchedule, type InsertAssessmentSchedule,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -27,6 +28,11 @@ export interface IStorage {
   createTeacher(teacher: InsertTeacher): Promise<Teacher>;
   checkPaymentId(payId: string): Promise<boolean>;
 
+  // Assessment schedule management
+  getAssessmentsByDate(date: string): Promise<AssessmentSchedule[]>;
+  getAllAssessmentDates(): Promise<string[]>;
+  createAssessmentSchedule(schedule: InsertAssessmentSchedule): Promise<AssessmentSchedule>;
+
   // Batch management
   getAllBatches(): Promise<Batch[]>;
   getBatch(batchName: string): Promise<Batch | undefined>;
@@ -40,6 +46,7 @@ export interface IStorage {
 
   // Question management
   getQuestionsByTopic(topicId: string, limit?: number): Promise<Question[]>;
+  getRandomQuestionsByTopic(topicId: string, count: number): Promise<Question[]>;
   createQuestion(question: InsertQuestion): Promise<Question>;
 
   // Feedback questions
@@ -47,10 +54,12 @@ export interface IStorage {
   createFeedbackQuestion(feedbackQuestion: InsertFeedbackQuestion): Promise<FeedbackQuestion>;
 
   // Exam management
+  checkExamExists(mobile: string, topicId: string, date: string): Promise<boolean>;
   checkTopicExists(topicName: string, mobile: string): Promise<boolean>;
   submitExamResult(result: InsertExamResult): Promise<ExamResult>;
   submitExamAnswers(answers: InsertExamAnswer[]): Promise<ExamAnswer[]>;
-  getExamResult(mobile: string, topicId: string): Promise<ExamResult | undefined>;
+  getExamResult(mobile: string, topicId: string, date?: string): Promise<ExamResult | undefined>;
+  getExamsByMobile(mobile: string): Promise<ExamResult[]>;
 
   // Feedback management
   submitTrainerFeedback(feedback: InsertTrainerFeedback[]): Promise<TrainerFeedback[]>;
