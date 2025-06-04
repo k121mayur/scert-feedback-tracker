@@ -232,14 +232,14 @@ export function BatchTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {batches.length === 0 ? (
+              {(batches as any[]).length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No batches found. Create your first batch to get started.
                   </TableCell>
                 </TableRow>
               ) : (
-                batches.map((batch: Batch, index: number) => (
+                (batches as any[]).map((batch: Batch, index: number) => (
                   <TableRow key={batch.id} className="hover:bg-muted/50">
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>{batch.district}</TableCell>
@@ -310,14 +310,14 @@ export function BatchTable() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {batchTeachers.length === 0 ? (
+                  {(batchTeachers as any[]).length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                         No teachers found for this batch.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    batchTeachers.map((teacher: BatchTeacher) => (
+                    (batchTeachers as any[]).map((teacher: BatchTeacher) => (
                       <TableRow key={teacher.id}>
                         <TableCell>{teacher.teacherName}</TableCell>
                         <TableCell>{teacher.teacherMobile}</TableCell>

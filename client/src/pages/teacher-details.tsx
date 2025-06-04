@@ -260,7 +260,7 @@ export default function TeacherDetails() {
                 />
               </div>
               <Button 
-                onClick={searchTeacher}
+                onClick={() => searchTeacher()}
                 disabled={loading || mobile.length !== 10}
                 className="px-6"
               >
