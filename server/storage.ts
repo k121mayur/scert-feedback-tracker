@@ -80,6 +80,16 @@ export interface IStorage {
 
   // Teacher feedback management
   getTeacherFeedback(mobile: string): Promise<any[]>;
+
+  // System statistics
+  getSystemStats(): Promise<{
+    totalTeachers: number;
+    totalDistricts: number;
+    totalBatches: number;
+    totalSubjects: number;
+    totalQuestions: number;
+    totalAssessmentDates: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
