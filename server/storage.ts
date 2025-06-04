@@ -230,50 +230,37 @@ export class DatabaseStorage implements IStorage {
       return cached;
     }
     
-    // OPTIMIZED: Use efficient random sampling instead of ORDER BY RANDOM()
-    // First get the total count and available IDs
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(questions)
-      .where(eq(questions.topicId, topicId));
-    
-    const totalQuestions = countResult?.count || 0;
-    if (totalQuestions === 0) {
-      return [];
-    }
-    
-    // Generate random IDs for sampling
-    const selectedIds = new Set<number>();
-    const maxAttempts = Math.min(totalQuestions, count * 3); // Prevent infinite loops
-    let attempts = 0;
-    
-    while (selectedIds.size < Math.min(count, totalQuestions) && attempts < maxAttempts) {
-      const randomOffset = Math.floor(Math.random() * totalQuestions);
-      const [randomQuestion] = await db
-        .select({ id: questions.id })
+    // SIMPLIFIED: Use offset-based random selection for reliability
+    try {
+      // Get all questions for the topic first
+      const allQuestions = await db
+        .select()
+        .from(questions)
+        .where(eq(questions.topicId, topicId));
+      
+      if (allQuestions.length === 0) {
+        return [];
+      }
+      
+      // Use JavaScript shuffle for reliable random selection
+      const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+      const result = shuffled.slice(0, Math.min(count, allQuestions.length));
+      
+      // Cache for shorter time since it's random
+      questionCache.set(cacheKey, result, 300); // 5 minutes
+      return result;
+    } catch (error) {
+      console.error("Error in getRandomQuestionsByTopic:", error);
+      // Fallback to simple ORDER BY RANDOM() if optimization fails
+      const result = await db
+        .select()
         .from(questions)
         .where(eq(questions.topicId, topicId))
-        .limit(1)
-        .offset(randomOffset);
+        .orderBy(sql`RANDOM()`)
+        .limit(count);
       
-      if (randomQuestion) {
-        selectedIds.add(randomQuestion.id);
-      }
-      attempts++;
+      return result;
     }
-    
-    // Fetch the selected questions
-    const result = await db
-      .select()
-      .from(questions)
-      .where(and(
-        eq(questions.topicId, topicId),
-        sql`${questions.id} IN (${Array.from(selectedIds).join(',')})`
-      ));
-    
-    // Cache for shorter time since it's random
-    questionCache.set(cacheKey, result, 300); // 5 minutes
-    return result;
   }
 
   async createQuestion(question: InsertQuestion): Promise<Question> {
