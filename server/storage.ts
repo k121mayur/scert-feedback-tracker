@@ -474,9 +474,13 @@ export class DatabaseStorage implements IStorage {
       const dateKey = schedule.date;
       
       if (!dateMap.has(dateKey)) {
+        // Find if all topics for this date are active to determine date status
+        const dateSchedules = schedules.filter(s => s.date === schedule.date);
+        const allTopicsActive = dateSchedules.every(s => s.isActive);
+        
         dateMap.set(dateKey, {
           date: schedule.date,
-          isActive: schedule.isActive,
+          isActive: allTopicsActive,
           topics: []
         });
       }
@@ -489,7 +493,7 @@ export class DatabaseStorage implements IStorage {
         dateEntry.topics.push({
           id: schedule.topicId,
           name: schedule.topicName,
-          isActive: true // Default to active
+          isActive: schedule.isActive // Use actual database value
         });
       }
     });
@@ -539,9 +543,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTopicActiveStatus(topicId: string, isActive: boolean): Promise<void> {
-    // For now, we'll log this action since we don't have a separate topics table
-    // In a production environment, you might want to add a topics control table
-    console.log(`Topic ${topicId} active status would be set to ${isActive}`);
+    await db.update(assessmentSchedules)
+      .set({ isActive })
+      .where(eq(assessmentSchedules.topicId, topicId));
+    
+    console.log(`Topic ${topicId} active status updated to ${isActive}`);
   }
 }
 

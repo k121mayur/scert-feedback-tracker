@@ -176,6 +176,10 @@ export default function Admin() {
         topics: uniqueTopics
       });
 
+      // Reload data to reflect database changes
+      loadedRef.current = false;
+      await loadAssessmentData();
+
       toast({
         title: "Success",
         description: "Assessment settings saved successfully!",
