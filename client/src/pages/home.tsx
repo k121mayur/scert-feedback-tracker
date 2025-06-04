@@ -23,11 +23,9 @@ export default function Home() {
   const { toast } = useToast();
 
   const handleMobileChange = (value: string) => {
-    // Only allow numbers and limit to 10 digits
     const numericValue = value.replace(/[^0-9]/g, '').slice(0, 10);
     setMobile(numericValue);
     
-    // Reset topic data when mobile changes
     if (numericValue.length !== 10) {
       setTopicData(null);
     }
@@ -49,16 +47,16 @@ export default function Home() {
       
       if (!data.success) {
         toast({
-          title: "Access Denied",
-          description: data.message || "Question paper is no longer active.",
+          title: "Mobile Number Not Found",
+          description: data.message || "This mobile number is not registered for training.",
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error("Error fetching topic data:", error);
       toast({
-        title: "Error",
-        description: "Failed to fetch exam details. Please try again.",
+        title: "Connection Error",
+        description: "Unable to verify mobile number. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -67,15 +65,15 @@ export default function Home() {
   };
 
   const handleStartExam = () => {
-    if (topicData?.success && topicData.topic_id) {
+    if (topicData && topicData.success) {
       setLocation(`/exam?mobile=${mobile}&topic=${topicData.topic_id}&batch=${topicData.batch_name}&district=${topicData.district}`);
     }
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation Header */}
-      <header className="bg-white shadow-sm border-b border-border sticky top-0 z-50">
+      {/* Header */}
+      <header className="bg-background shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
@@ -120,155 +118,167 @@ export default function Home() {
           </div>
 
           <TabsContent value="student">
-            {/* Examination Section */}
+            {/* New Date-Based Assessment System - Primary Section */}
+            <section id="new-assessment" className="mb-12">
+              <Card className="max-w-2xl mx-auto material-shadow-2 border-2 border-primary">
+                <CardHeader className="bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-t-lg">
+                  <CardTitle className="text-2xl font-medium flex items-center">
+                    <Calendar className="mr-2" />
+                    New Date-Based Assessment System
+                  </CardTitle>
+                  <p className="text-primary-foreground/90 mt-2">
+                    Enhanced assessment platform with scheduled topics for June 1-10, 2025
+                  </p>
+                </CardHeader>
+                <CardContent className="p-8">
+                  <div className="text-center space-y-6">
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-semibold text-foreground">Modern Assessment Experience</h3>
+                      <p className="text-muted-foreground">
+                        Select from 5 topics per assessment date • Randomized questions • Comprehensive tracking
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <div className="p-4 bg-muted rounded-lg">
+                        <div className="font-semibold text-primary">10 Assessment Dates</div>
+                        <div className="text-muted-foreground">June 1-10, 2025</div>
+                      </div>
+                      <div className="p-4 bg-muted rounded-lg">
+                        <div className="font-semibold text-primary">5 Topics/Date</div>
+                        <div className="text-muted-foreground">Varied subjects</div>
+                      </div>
+                      <div className="p-4 bg-muted rounded-lg">
+                        <div className="font-semibold text-primary">5 Questions</div>
+                        <div className="text-muted-foreground">From 12-question banks</div>
+                      </div>
+                    </div>
+
+                    <Button 
+                      onClick={() => setLocation('/new-exam')}
+                      size="lg" 
+                      className="w-full md:w-auto px-8 py-3 text-lg font-medium"
+                    >
+                      Start New Assessment
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+
+            {/* Legacy Examination System - Secondary Section */}
             <section id="exam" className="mb-12">
               <Card className="max-w-2xl mx-auto material-shadow-2">
-                <CardHeader className="bg-primary text-primary-foreground rounded-t-lg">
-                  <CardTitle className="text-2xl font-medium flex items-center">
+                <CardHeader className="bg-muted text-muted-foreground rounded-t-lg">
+                  <CardTitle className="text-xl font-medium flex items-center">
                     <GraduationCap className="mr-2" />
-                    Online Examination System
+                    Legacy Examination System
                   </CardTitle>
-                  <p className="text-primary-foreground/80 mt-1">Complete your training assessment</p>
+                  <p className="text-muted-foreground/80 mt-1">
+                    Traditional mobile-based assessment method
+                  </p>
                 </CardHeader>
                 
                 <CardContent className="p-6">
-                  {/* Demo Numbers Section */}
-                  <div className="mb-6 p-4 bg-muted rounded-lg border">
-                    <h3 className="text-sm font-medium text-foreground mb-2 flex items-center">
-                      <User className="h-4 w-4 mr-2" />
-                      Demo Login Numbers
-                    </h3>
-                    <p className="text-xs text-muted-foreground mb-3">Use these mobile numbers to test the system:</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                      <div className="flex items-center justify-between p-2 bg-background rounded border">
-                        <span className="font-mono">9876543210</span>
-                        <span className="text-xs text-muted-foreground">Math Topic</span>
-                      </div>
-                      <div className="flex items-center justify-between p-2 bg-background rounded border">
-                        <span className="font-mono">9876543211</span>
-                        <span className="text-xs text-muted-foreground">Science Topic</span>
-                      </div>
-                      <div className="flex items-center justify-between p-2 bg-background rounded border">
-                        <span className="font-mono">9876543212</span>
-                        <span className="text-xs text-muted-foreground">English Topic</span>
-                      </div>
-                      <div className="flex items-center justify-between p-2 bg-background rounded border">
-                        <span className="font-mono">9876543213</span>
-                        <span className="text-xs text-muted-foreground">History Topic</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* New Assessment System Button */}
-                  <div className="mb-6 text-center">
-                    <Button
-                      onClick={() => setLocation('/new-exam')}
-                      className="w-full max-w-md bg-accent hover:bg-accent/90 text-accent-foreground"
-                      size="lg"
-                    >
-                      <Calendar className="mr-2 h-5 w-5" />
-                      New Date-Based Assessment System
-                    </Button>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Select from 50 topics across 10 dates (June 1-10, 2025) • 5 random questions from 12-question banks
-                    </p>
-                  </div>
-
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">
-                        Or use legacy system
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="max-w-md mx-auto mt-6">
-                    <div className="mb-6">
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Mobile Number (Legacy System)
+                  <div className="space-y-6">
+                    <div>
+                      <label htmlFor="mobile" className="block text-sm font-medium text-foreground mb-2">
+                        Mobile Number
                       </label>
-                      <div className="relative">
-                        <Input
-                          type="tel"
-                          value={mobile}
-                          onChange={(e) => handleMobileChange(e.target.value)}
-                          className="pr-10"
-                          placeholder="Enter your 10-digit mobile number"
-                          maxLength={10}
-                        />
-                        <User className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                      </div>
+                      <Input
+                        id="mobile"
+                        type="tel"
+                        placeholder="Enter your 10-digit mobile number"
+                        value={mobile}
+                        onChange={(e) => handleMobileChange(e.target.value)}
+                        className="w-full"
+                        maxLength={10}
+                      />
+                      {mobile && mobile.length < 10 && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Please enter a complete 10-digit mobile number
+                        </p>
+                      )}
                     </div>
-                    
-                    {mobile.length === 10 && (
-                      <div className="space-y-4 mb-6">
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Topic ID
-                          </label>
-                          <Input
-                            value={topicData?.topic_id || ''}
-                            readOnly
-                            className="bg-muted"
-                            placeholder={loading ? "Loading..." : "Auto-filled based on mobile number"}
-                          />
-                        </div>
-                        
-                        {topicData?.success && (
-                          <>
-                            <div>
-                              <label className="block text-sm font-medium text-foreground mb-2">
-                                Batch Name
-                              </label>
-                              <Input
-                                value={topicData.batch_name || ''}
-                                readOnly
-                                className="bg-muted"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-foreground mb-2">
-                                District
-                              </label>
-                              <Input
-                                value={topicData.district || ''}
-                                readOnly
-                                className="bg-muted"
-                              />
-                            </div>
-                          </>
-                        )}
+
+                    {loading && (
+                      <div className="text-center py-4">
+                        <p className="text-muted-foreground">Verifying mobile number...</p>
                       </div>
                     )}
-                    
-                    <Button
-                      onClick={handleStartExam}
-                      disabled={!topicData?.success || loading}
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground material-shadow-1 hover:material-shadow-2 transition-all"
-                    >
-                      <GraduationCap className="mr-2 h-4 w-4" />
-                      Start Examination
-                    </Button>
-                    
-                    <Card className="mt-6 bg-blue-50 border-blue-200">
-                      <CardContent className="p-4">
-                        <div className="flex items-start space-x-2">
-                          <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                          <div className="text-sm text-blue-800">
-                            <p className="font-medium mb-1">Exam Guidelines:</p>
-                            <ul className="space-y-1 text-blue-700">
-                              <li>• 10 questions, 10 minutes duration</li>
-                              <li>• No going back to previous questions</li>
-                              <li>• Auto-submit when time expires</li>
-                              <li>• Only one attempt allowed</li>
-                            </ul>
-                          </div>
+
+                    {topicData && topicData.success && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h4 className="font-medium text-green-800 mb-2">Registration Found!</h4>
+                        <div className="text-sm text-green-700 space-y-1">
+                          <p><span className="font-medium">Topic:</span> {topicData.topic_id}</p>
+                          <p><span className="font-medium">Batch:</span> {topicData.batch_name}</p>
+                          <p><span className="font-medium">District:</span> {topicData.district}</p>
                         </div>
-                      </CardContent>
-                    </Card>
+                        <Button 
+                          onClick={handleStartExam}
+                          className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          Start Legacy Examination
+                        </Button>
+                      </div>
+                    )}
+
+                    {mobile.length === 10 && !loading && !topicData?.success && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <p className="text-amber-800 text-sm">
+                          Mobile number not found in the system. Please try the New Date-Based Assessment System above.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+
+            {/* Demo Numbers Section - Moved to Bottom */}
+            <section className="mb-12">
+              <Card className="max-w-2xl mx-auto">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center">
+                    <Info className="mr-2 h-5 w-5" />
+                    Demo Testing Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium text-foreground mb-2">Legacy System Demo Numbers</h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Use these mobile numbers to test the legacy examination system:
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="flex items-center justify-between p-3 bg-muted rounded border">
+                          <span className="font-mono text-sm">9876543210</span>
+                          <span className="text-xs text-muted-foreground">Math Topic</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-muted rounded border">
+                          <span className="font-mono text-sm">9876543211</span>
+                          <span className="text-xs text-muted-foreground">Science Topic</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-muted rounded border">
+                          <span className="font-mono text-sm">9876543212</span>
+                          <span className="text-xs text-muted-foreground">English Topic</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-muted rounded border">
+                          <span className="font-mono text-sm">9876543213</span>
+                          <span className="text-xs text-muted-foreground">History Topic</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-3 border-t">
+                      <h4 className="font-medium text-foreground mb-2">Recommended Approach</h4>
+                      <p className="text-sm text-muted-foreground">
+                        For the best experience, use the <strong>New Date-Based Assessment System</strong> above. 
+                        It provides enhanced features, better tracking, and supports 40,000 concurrent users.
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -298,45 +308,34 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
-              <h3 className="text-lg font-medium mb-4">Teacher Training Portal</h3>
+              <h3 className="text-lg font-semibold mb-4">Teacher Training Portal</h3>
               <p className="text-gray-300 text-sm">
-                Empowering educators through comprehensive training and assessment programs.
+                Comprehensive assessment platform designed for efficient teacher training and evaluation.
               </p>
             </div>
             <div>
-              <h3 className="text-lg font-medium mb-4">Quick Links</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <Link href="#exam" className="text-gray-300 hover:text-white transition-colors">
-                    Examination
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#results" className="text-gray-300 hover:text-white transition-colors">
-                    Results
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#feedback" className="text-gray-300 hover:text-white transition-colors">
-                    Feedback
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/admin" className="text-gray-300 hover:text-white transition-colors">
-                    Administration
-                  </Link>
-                </li>
+              <h3 className="text-lg font-semibold mb-4">Features</h3>
+              <ul className="text-gray-300 text-sm space-y-2">
+                <li>• Date-based assessment scheduling</li>
+                <li>• Randomized question selection</li>
+                <li>• Comprehensive result tracking</li>
+                <li>• Feedback collection system</li>
               </ul>
             </div>
             <div>
-              <h3 className="text-lg font-medium mb-4">Support</h3>
-              <p className="text-gray-300 text-sm">
-                For technical assistance, contact your system administrator.
-              </p>
+              <h3 className="text-lg font-semibold mb-4">Performance</h3>
+              <ul className="text-gray-300 text-sm space-y-2">
+                <li>• Supports 40,000 concurrent users</li>
+                <li>• Optimized database performance</li>
+                <li>• High-speed response times</li>
+                <li>• Robust error handling</li>
+              </ul>
             </div>
           </div>
-          <div className="border-t border-gray-700 mt-8 pt-4 text-center text-sm text-gray-300">
-            <p>&copy; 2024 Teacher Training Portal. All rights reserved.</p>
+          <div className="border-t border-gray-700 mt-8 pt-8 text-center">
+            <p className="text-gray-400 text-sm">
+              &copy; 2025 Teacher Training Portal. Built with modern web technologies for optimal performance.
+            </p>
           </div>
         </div>
       </footer>
