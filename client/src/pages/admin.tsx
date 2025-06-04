@@ -82,23 +82,12 @@ export default function Admin() {
       {/* Admin Header */}
       <header className="bg-white shadow-sm border-b border-border p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Shield className="h-8 w-8 text-primary" />
-              <div>
-                <h1 className="text-2xl font-medium text-foreground">Administration Panel</h1>
-                <p className="text-muted-foreground mt-1">Manage batches, teachers, and system data</p>
-              </div>
+          <div className="flex items-center space-x-3">
+            <Shield className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-2xl font-medium text-foreground">Administration Panel</h1>
+              <p className="text-muted-foreground mt-1">Manage batches, teachers, and system data</p>
             </div>
-            
-            <Button
-              onClick={() => setLocation('/admin/teacher-details')}
-              className="flex items-center space-x-2"
-              variant="outline"
-            >
-              <UserSearch className="h-4 w-4" />
-              <span>Teacher Details</span>
-            </Button>
           </div>
         </div>
       </header>
@@ -108,7 +97,7 @@ export default function Admin() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           {/* Admin Tabs */}
           <div className="border-b border-border mb-6">
-            <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsList className="grid w-full max-w-2xl grid-cols-4">
               <TabsTrigger value="batches" className="flex items-center space-x-2">
                 <Users className="h-4 w-4" />
                 <span>Batch Management</span>
@@ -117,9 +106,13 @@ export default function Admin() {
                 <FileText className="h-4 w-4" />
                 <span>Data Verification</span>
               </TabsTrigger>
+              <TabsTrigger value="teachers" className="flex items-center space-x-2">
+                <UserSearch className="h-4 w-4" />
+                <span>Teacher Reports</span>
+              </TabsTrigger>
               <TabsTrigger value="reports" className="flex items-center space-x-2">
                 <BarChart3 className="h-4 w-4" />
-                <span>Reports</span>
+                <span>System Reports</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -140,6 +133,54 @@ export default function Admin() {
               </CardHeader>
               <CardContent>
                 <CsvUpload />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Teacher Reports Tab */}
+          <TabsContent value="teachers">
+            <Card className="material-shadow-2">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <UserSearch className="h-5 w-5" />
+                  <span>Teacher Search & Reports</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="max-w-md space-y-4">
+                  <div>
+                    <label htmlFor="mobile" className="block text-sm font-medium text-foreground mb-2">
+                      Search by Mobile Number
+                    </label>
+                    <Input
+                      id="mobile"
+                      type="tel"
+                      placeholder="Enter 10-digit mobile number"
+                      value={mobile}
+                      onChange={(e) => handleMobileChange(e.target.value)}
+                      className="w-full"
+                      maxLength={10}
+                    />
+                  </div>
+                  <Button 
+                    onClick={searchTeacher}
+                    disabled={loading || mobile.length !== 10}
+                    className="w-full"
+                  >
+                    {loading ? "Searching..." : "Search Teacher"}
+                  </Button>
+                  
+                  <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                    <h4 className="font-medium mb-2">Sample Teacher Mobile Numbers:</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                      <div>Mumbai: 9876543201</div>
+                      <div>Pune: 9876543226</div>
+                      <div>Nashik: 9876543251</div>
+                      <div>Nagpur: 9876543276</div>
+                      <div>Aurangabad: 9876543301</div>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
