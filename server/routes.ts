@@ -1,9 +1,9 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import multer from "multer";
-import csv from "csv-parse";
+import { parse } from "csv-parse";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -300,7 +300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Parse CSV
       await new Promise((resolve, reject) => {
-        csv.parse(csvData, { columns: true }, (err, output) => {
+        parse(csvData, { columns: true }, (err: any, output: any) => {
           if (err) reject(err);
           else {
             records.push(...output);

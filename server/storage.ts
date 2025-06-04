@@ -127,7 +127,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBatch(batchName: string): Promise<boolean> {
     const result = await db.delete(batches).where(eq(batches.batchName, batchName));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   async getBatchTeachers(batchName: string): Promise<BatchTeacher[]> {
@@ -219,8 +219,8 @@ export class DatabaseStorage implements IStorage {
     return newFeedback;
   }
 
-  async createTopicFeedback(topicFeedback: InsertTopicFeedback): Promise<TopicFeedback> {
-    const [newTopicFeedback] = await db.insert(topicFeedback).values(topicFeedback).returning();
+  async createTopicFeedback(feedbackData: InsertTopicFeedback): Promise<TopicFeedback> {
+    const [newTopicFeedback] = await db.insert(topicFeedback).values(feedbackData).returning();
     return newTopicFeedback;
   }
 
