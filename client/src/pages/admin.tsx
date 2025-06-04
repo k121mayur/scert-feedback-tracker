@@ -3,12 +3,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BatchTable } from "@/components/batch-table";
 import { CsvUpload } from "@/components/csv-upload";
-import { Users, FileText, BarChart3, Shield, UserSearch, ArrowLeft, Plus, Edit, Settings } from "lucide-react";
+import { Users, FileText, BarChart3, Shield, UserSearch, ArrowLeft, Plus, Edit, Settings, Calendar, BookOpen, Save } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+
+interface AssessmentDate {
+  date: string;
+  isActive: boolean;
+}
+
+interface Topic {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
+interface DateTopicMapping {
+  date: string;
+  isActive: boolean;
+  topics: Topic[];
+}
 
 interface ExamStats {
   totalExams: number;
@@ -107,7 +126,7 @@ export default function Admin() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           {/* Admin Tabs */}
           <div className="border-b border-border mb-6">
-            <TabsList className="grid w-full max-w-xl grid-cols-3">
+            <TabsList className="grid w-full max-w-4xl grid-cols-4">
               <TabsTrigger value="batches" className="flex items-center space-x-2">
                 <Users className="h-4 w-4" />
                 <span>Batch Management</span>
@@ -115,6 +134,10 @@ export default function Admin() {
               <TabsTrigger value="teachers" className="flex items-center space-x-2">
                 <UserSearch className="h-4 w-4" />
                 <span>Teacher Management</span>
+              </TabsTrigger>
+              <TabsTrigger value="control" className="flex items-center space-x-2">
+                <Settings className="h-4 w-4" />
+                <span>Assessment Control</span>
               </TabsTrigger>
               <TabsTrigger value="reports" className="flex items-center space-x-2">
                 <BarChart3 className="h-4 w-4" />
@@ -206,30 +229,13 @@ export default function Admin() {
                 </CardContent>
               </Card>
 
-              {/* Assessment Control Section */}
-              <Card className="material-shadow-2">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Settings className="h-5 w-5" />
-                    <span>Assessment Control</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Control which dates and topics are available for teacher assessments
-                    </p>
-                    <Button 
-                      onClick={() => setLocation('/admin/assessment-control')}
-                      className="flex items-center space-x-2"
-                    >
-                      <Settings className="h-4 w-4" />
-                      <span>Manage Assessment Availability</span>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+
             </div>
+          </TabsContent>
+
+          {/* Assessment Control Tab */}
+          <TabsContent value="control">
+            <AssessmentControlSection />
           </TabsContent>
 
           {/* Reports Tab */}
