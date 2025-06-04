@@ -410,35 +410,68 @@ export default function TeacherDetails() {
                   <TabsContent value="feedback">
                     <Card>
                       <CardHeader>
-                        <CardTitle>Feedback History</CardTitle>
+                        <CardTitle>Feedback History by Subject</CardTitle>
                       </CardHeader>
                       <CardContent>
                         {feedbackRecords.length > 0 ? (
                           <div className="space-y-4">
-                            {feedbackRecords.map((feedback) => (
-                              <div key={feedback.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                                <div className="space-y-3">
-                                  <div className="flex justify-between items-start">
-                                    <h3 className="font-semibold text-primary">{feedback.topicName}</h3>
-                                    <span className="text-sm text-muted-foreground">
-                                      {formatDateTime(feedback.createdAt)}
-                                    </span>
-                                  </div>
+                            {(() => {
+                              // Group feedback by subject/topic
+                              const groupedFeedback = feedbackRecords.reduce((acc: any, feedback) => {
+                                const topic = feedback.topicName;
+                                if (!acc[topic]) {
+                                  acc[topic] = [];
+                                }
+                                acc[topic].push(feedback);
+                                return acc;
+                              }, {});
+
+                              return Object.entries(groupedFeedback).map(([topic, feedbacks]: [string, any]) => (
+                                <div key={topic} className="border rounded-lg">
+                                  <button 
+                                    className="w-full p-4 text-left hover:bg-muted/50 transition-colors flex justify-between items-center"
+                                    onClick={() => {
+                                      const element = document.getElementById(`feedback-${topic}`);
+                                      if (element) {
+                                        element.classList.toggle('hidden');
+                                      }
+                                    }}
+                                  >
+                                    <div>
+                                      <h3 className="font-semibold text-primary">{topic}</h3>
+                                      <p className="text-sm text-muted-foreground">{feedbacks.length} feedback record(s)</p>
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">Click to expand</div>
+                                  </button>
                                   
-                                  <div className="bg-muted/50 rounded-lg p-3">
-                                    <p className="text-sm font-medium text-muted-foreground mb-1">
-                                      {feedback.feedbackQue}
-                                    </p>
-                                    <p className="text-foreground">{feedback.feedback}</p>
-                                  </div>
-                                  
-                                  <div className="text-sm text-muted-foreground">
-                                    <span className="font-medium">Batch:</span> {feedback.batchName} | 
-                                    <span className="font-medium"> District:</span> {feedback.district}
+                                  <div id={`feedback-${topic}`} className="hidden border-t">
+                                    {feedbacks.map((feedback: any) => (
+                                      <div key={feedback.id} className="p-4 border-b last:border-b-0">
+                                        <div className="space-y-3">
+                                          <div className="flex justify-between items-start">
+                                            <span className="text-sm text-muted-foreground">
+                                              {formatDateTime(feedback.createdAt)}
+                                            </span>
+                                          </div>
+                                          
+                                          <div className="bg-muted/50 rounded-lg p-3">
+                                            <p className="text-sm font-medium text-muted-foreground mb-1">
+                                              {feedback.feedbackQue}
+                                            </p>
+                                            <p className="text-foreground">{feedback.feedback}</p>
+                                          </div>
+                                          
+                                          <div className="text-sm text-muted-foreground">
+                                            <span className="font-medium">Batch:</span> {feedback.batchName} | 
+                                            <span className="font-medium"> District:</span> {feedback.district}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              ));
+                            })()}
                           </div>
                         ) : (
                           <div className="text-center py-8">
