@@ -79,12 +79,13 @@ export default function Processing() {
           // Store results and navigate to results page
           sessionStorage.setItem('examResult', JSON.stringify({
             ...statusData.result,
-            mobile: processingData?.mobile,
-            topic: processingData?.topic,
-            topicName: processingData?.topicName,
-            assessmentDate: processingData?.assessmentDate,
-            batch: processingData?.batch,
-            district: processingData?.district,
+            // Use mobile from result if available, otherwise from processing data
+            mobile: statusData.result.mobile || processingData?.mobile,
+            topic: statusData.result.topicId || processingData?.topic,
+            topicName: statusData.result.topicName || processingData?.topicName,
+            assessmentDate: statusData.result.assessmentDate || processingData?.assessmentDate,
+            batch: statusData.result.batch || processingData?.batch,
+            district: statusData.result.district || processingData?.district,
           }));
           
           setTimeout(() => {
