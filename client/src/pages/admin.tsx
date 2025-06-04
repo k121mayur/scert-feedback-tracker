@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BatchTable } from "@/components/batch-table";
@@ -53,6 +53,7 @@ export default function Admin() {
   const [assessmentLoading, setAssessmentLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dateTopicMappings, setDateTopicMappings] = useState<DateTopicMapping[]>([]);
+  const loadedRef = useRef(false);
 
   const { data: stats } = useQuery({
     queryKey: ['/api/admin/stats'],
@@ -103,8 +104,12 @@ export default function Admin() {
   };
 
   // Assessment Control Functions
-  const loadAssessmentData = async () => {
+  const loadAssessmentData = useCallback(async () => {
+    if (loadedRef.current || assessmentLoading) return;
+    
     setAssessmentLoading(true);
+    loadedRef.current = true;
+    
     try {
       const [datesResponse, topicsResponse] = await Promise.all([
         fetch('/api/admin/assessment-control/dates'),
@@ -123,6 +128,7 @@ export default function Admin() {
       setDateTopicMappings(mappings);
     } catch (error) {
       console.error("Error loading assessment data:", error);
+      loadedRef.current = false;
       toast({
         title: "Error",
         description: "Failed to load assessment data.",
@@ -131,7 +137,7 @@ export default function Admin() {
     } finally {
       setAssessmentLoading(false);
     }
-  };
+  }, [assessmentLoading, toast]);
 
   const handleDateToggle = (date: string, isActive: boolean) => {
     setDateTopicMappings(prev => 
@@ -211,7 +217,7 @@ export default function Admin() {
       if (activeTab === 'control') {
         loadAssessmentData();
       }
-    }, [activeTab]);
+    }, [activeTab, loadAssessmentData]);
 
     return (
       <div className="space-y-6">
