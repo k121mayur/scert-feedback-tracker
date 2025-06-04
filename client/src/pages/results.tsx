@@ -46,28 +46,57 @@ export default function Results() {
   const handleDownloadResults = () => {
     if (!examResult) return;
 
+    const attemptedQuestions = examResult.correctCount + examResult.wrongCount;
+    const percentage = Math.round((examResult.correctCount / examResult.totalQuestions) * 100);
+    const accuracy = attemptedQuestions > 0 ? Math.round((examResult.correctCount / attemptedQuestions) * 100) : 0;
+    const passingScore = 60;
+    const resultStatus = percentage >= passingScore ? "PASSED" : "FAILED";
+    
     const resultText = `
 TEACHER TRAINING EXAMINATION RESULTS
 ====================================
 
+CANDIDATE INFORMATION:
+--------------------
 Mobile Number: ${examResult.mobile}
+Topic: ${examResult.topicName || examResult.topic}
 Topic ID: ${examResult.topic}
+Assessment Date: ${examResult.assessmentDate || new Date().toISOString().split('T')[0]}
 Batch Name: ${examResult.batch}
 District: ${examResult.district}
+Exam Date & Time: ${new Date().toLocaleString()}
 
-SCORE SUMMARY:
---------------
+PERFORMANCE SUMMARY:
+------------------
 Total Questions: ${examResult.totalQuestions}
+Questions Attempted: ${attemptedQuestions}
+Questions Unanswered: ${examResult.unansweredCount}
+
+SCORE BREAKDOWN:
+---------------
 Correct Answers: ${examResult.correctCount}
 Wrong Answers: ${examResult.wrongCount}
-Unanswered: ${examResult.unansweredCount}
-Attempted: ${examResult.correctCount + examResult.wrongCount}
+Final Score: ${examResult.correctCount}/${examResult.totalQuestions}
 
-Score: ${examResult.correctCount}/${examResult.totalQuestions}
-Percentage: ${Math.round((examResult.correctCount / examResult.totalQuestions) * 100)}%
-Accuracy: ${examResult.correctCount + examResult.wrongCount > 0 ? Math.round((examResult.correctCount / (examResult.correctCount + examResult.wrongCount)) * 100) : 0}%
+PERFORMANCE METRICS:
+------------------
+Overall Percentage: ${percentage}%
+Attempt Accuracy: ${accuracy}%
+Completion Rate: ${Math.round((attemptedQuestions / examResult.totalQuestions) * 100)}%
 
-Date: ${new Date().toLocaleString()}
+RESULT STATUS: ${resultStatus}
+${percentage >= passingScore ? 'Congratulations! You have successfully passed the assessment.' : 'Please review the topics and attempt the assessment again.'}
+
+GRADE CLASSIFICATION:
+-------------------
+${percentage >= 90 ? 'Excellent (A+)' :
+  percentage >= 80 ? 'Very Good (A)' :
+  percentage >= 70 ? 'Good (B)' :
+  percentage >= 60 ? 'Satisfactory (C)' :
+  'Needs Improvement (F)'}
+
+Generated on: ${new Date().toLocaleString()}
+System: Teacher Training Assessment Platform
     `.trim();
 
     const blob = new Blob([resultText], { type: 'text/plain' });

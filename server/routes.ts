@@ -251,16 +251,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Submit feedback
   app.post("/api/submit-feedback", async (req, res) => {
     try {
+      console.log('Received feedback submission request body:', req.body);
+      
       const feedbackSchema = z.object({
-        topic_name: z.string(),
-        mobile_no: z.string().length(10),
-        batch_name: z.string(),
-        district: z.string(),
+        topic_name: z.string().optional(),
+        mobile_no: z.string().min(10),
+        batch_name: z.string().optional(),
+        district: z.string().optional(),
         questions: z.array(z.string()),
         feedback_answers: z.array(z.string())
       });
 
-      const data = feedbackSchema.parse(req.body);
+      const parsedData = feedbackSchema.parse(req.body);
+      
+      // Provide defaults for optional fields
+      const data = {
+        topic_name: parsedData.topic_name || "General",
+        mobile_no: parsedData.mobile_no,
+        batch_name: parsedData.batch_name || "General",
+        district: parsedData.district || "General",
+        questions: parsedData.questions,
+        feedback_answers: parsedData.feedback_answers
+      };
 
       // Check if feedback already exists
       const exists = await storage.checkTopicExists(data.topic_name, data.mobile_no);
