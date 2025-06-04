@@ -117,6 +117,25 @@ export class DatabaseStorage implements IStorage {
     return (result?.count || 0) > 0;
   }
 
+  async getAssessmentsByDate(date: string): Promise<AssessmentSchedule[]> {
+    return await db.select().from(assessmentSchedules)
+      .where(and(eq(assessmentSchedules.assessmentDate, date), eq(assessmentSchedules.isActive, true)));
+  }
+
+  async getAllAssessmentDates(): Promise<string[]> {
+    const result = await db.select({ date: assessmentSchedules.assessmentDate })
+      .from(assessmentSchedules)
+      .where(eq(assessmentSchedules.isActive, true))
+      .groupBy(assessmentSchedules.assessmentDate)
+      .orderBy(assessmentSchedules.assessmentDate);
+    return result.map(r => r.date);
+  }
+
+  async createAssessmentSchedule(schedule: InsertAssessmentSchedule): Promise<AssessmentSchedule> {
+    const [newSchedule] = await db.insert(assessmentSchedules).values(schedule).returning();
+    return newSchedule;
+  }
+
   async getAllBatches(): Promise<Batch[]> {
     return await db
       .select()
@@ -173,6 +192,15 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
   }
 
+  async getRandomQuestionsByTopic(topicId: string, count: number): Promise<Question[]> {
+    return await db
+      .select()
+      .from(questions)
+      .where(eq(questions.topicId, topicId))
+      .orderBy(sql`RANDOM()`)
+      .limit(count);
+  }
+
   async createQuestion(question: InsertQuestion): Promise<Question> {
     const [newQuestion] = await db.insert(questions).values(question).returning();
     return newQuestion;
@@ -210,17 +238,43 @@ export class DatabaseStorage implements IStorage {
     return newAnswers;
   }
 
-  async getExamResult(mobile: string, topicId: string): Promise<ExamResult | undefined> {
+  async checkExamExists(mobile: string, topicId: string, date: string): Promise<boolean> {
     const [result] = await db
-      .select()
+      .select({ count: count() })
       .from(examResults)
       .where(
         and(
           eq(examResults.mobile, mobile),
-          eq(examResults.topicId, topicId)
+          eq(examResults.topicId, topicId),
+          eq(examResults.assessmentDate, date)
         )
       );
+    return (result?.count || 0) > 0;
+  }
+
+  async getExamResult(mobile: string, topicId: string, date?: string): Promise<ExamResult | undefined> {
+    let whereCondition = and(
+      eq(examResults.mobile, mobile),
+      eq(examResults.topicId, topicId)
+    );
+    
+    if (date) {
+      whereCondition = and(whereCondition, eq(examResults.assessmentDate, date));
+    }
+
+    const [result] = await db
+      .select()
+      .from(examResults)
+      .where(whereCondition);
     return result || undefined;
+  }
+
+  async getExamsByMobile(mobile: string): Promise<ExamResult[]> {
+    return await db
+      .select()
+      .from(examResults)
+      .where(eq(examResults.mobile, mobile))
+      .orderBy(desc(examResults.submittedAt));
   }
 
   async submitTrainerFeedback(feedback: InsertTrainerFeedback[]): Promise<TrainerFeedback[]> {

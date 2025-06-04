@@ -8,6 +8,68 @@ import { parse } from "csv-parse";
 const upload = multer({ storage: multer.memoryStorage() });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Get available assessment dates
+  app.get("/api/assessment-dates", async (req, res) => {
+    try {
+      const dates = await storage.getAllAssessmentDates();
+      res.json(dates);
+    } catch (error) {
+      console.error("Error fetching assessment dates:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get assessments for a specific date
+  app.get("/api/assessments-by-date/:date", async (req, res) => {
+    try {
+      const { date } = req.params;
+      const assessments = await storage.getAssessmentsByDate(date);
+      res.json(assessments);
+    } catch (error) {
+      console.error("Error fetching assessments:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Check if exam exists for date/topic/mobile
+  app.get("/api/check-exam-exists/:mobile/:topicId/:date", async (req, res) => {
+    try {
+      const { mobile, topicId, date } = req.params;
+      const exists = await storage.checkExamExists(mobile, topicId, date);
+      res.json({ exists });
+    } catch (error) {
+      console.error("Error checking exam existence:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get questions for new exam format
+  app.get("/api/exam-questions/:topicId", async (req, res) => {
+    try {
+      const { topicId } = req.params;
+      const questions = await storage.getRandomQuestionsByTopic(topicId, 5);
+      
+      if (questions.length === 0) {
+        return res.json({ status: "error", message: "No questions available for this topic" });
+      }
+
+      res.json({
+        status: "success",
+        questions: questions.map(q => ({
+          id: q.id,
+          question: q.question,
+          option_a: q.optionA,
+          option_b: q.optionB,
+          option_c: q.optionC,
+          option_d: q.optionD
+        }))
+      });
+    } catch (error) {
+      console.error("Error fetching exam questions:", error);
+      res.status(500).json({ status: "error", message: "Server error" });
+    }
+  });
+
   // Get topic data by mobile number
   app.get("/api/topic-by-mobile/:mobile", async (req, res) => {
     try {
