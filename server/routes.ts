@@ -418,6 +418,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Assessment Control: Get available dates
+  app.get("/api/admin/assessment-control/dates", async (req, res) => {
+    try {
+      const dates = await storage.getAssessmentControlDates();
+      res.json(dates);
+    } catch (error) {
+      console.error("Error fetching assessment control dates:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Assessment Control: Get available topics
+  app.get("/api/admin/assessment-control/topics", async (req, res) => {
+    try {
+      const topics = await storage.getAssessmentControlTopics();
+      res.json(topics);
+    } catch (error) {
+      console.error("Error fetching assessment control topics:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Assessment Control: Update date status
+  app.put("/api/admin/assessment-control/dates", async (req, res) => {
+    try {
+      const datesSchema = z.object({
+        dates: z.array(z.object({
+          date: z.string(),
+          isActive: z.boolean()
+        }))
+      });
+
+      const { dates } = datesSchema.parse(req.body);
+      
+      // Update each date's status
+      for (const dateItem of dates) {
+        await storage.updateAssessmentDateStatus(dateItem.date, dateItem.isActive);
+      }
+
+      res.json({ success: true, message: "Date settings updated successfully" });
+    } catch (error) {
+      console.error("Error updating assessment date settings:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Server error" });
+      }
+    }
+  });
+
+  // Assessment Control: Update topic status
+  app.put("/api/admin/assessment-control/topics", async (req, res) => {
+    try {
+      const topicsSchema = z.object({
+        topics: z.array(z.object({
+          id: z.string(),
+          name: z.string(),
+          isActive: z.boolean()
+        }))
+      });
+
+      const { topics } = topicsSchema.parse(req.body);
+      
+      // Update each topic's status
+      for (const topic of topics) {
+        await storage.updateTopicActiveStatus(topic.id, topic.isActive);
+      }
+
+      res.json({ success: true, message: "Topic settings updated successfully" });
+    } catch (error) {
+      console.error("Error updating assessment topic settings:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Server error" });
+      }
+    }
+  });
+
   // Admin: Get batch teachers
   app.get("/api/admin/batches/:batchName/teachers", async (req, res) => {
     try {

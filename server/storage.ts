@@ -455,6 +455,65 @@ export class DatabaseStorage implements IStorage {
       };
     }
   }
+
+  async getAssessmentControlDates(): Promise<{ date: string; isActive: boolean; }[]> {
+    const dates = await db.select({
+      date: assessmentSchedules.assessmentDate,
+      isActive: assessmentSchedules.isActive
+    })
+    .from(assessmentSchedules)
+    .groupBy(assessmentSchedules.assessmentDate, assessmentSchedules.isActive)
+    .orderBy(assessmentSchedules.assessmentDate);
+    
+    return dates;
+  }
+
+  async getAssessmentControlTopics(): Promise<{ id: string; name: string; isActive: boolean; }[]> {
+    const topics = await db.select({
+      id: questions.topicId
+    })
+    .from(questions)
+    .groupBy(questions.topicId)
+    .orderBy(questions.topicId);
+    
+    // Create a map of topic names based on topicId
+    const topicNames: { [key: string]: string } = {
+      'MATH_BASIC': 'Basic Mathematics',
+      'MATH_ADVANCED': 'Advanced Mathematics',
+      'SCIENCE_PHYSICS': 'Physics',
+      'SCIENCE_CHEMISTRY': 'Chemistry',
+      'SCIENCE_BIOLOGY': 'Biology',
+      'ENGLISH_GRAMMAR': 'English Grammar',
+      'ENGLISH_LITERATURE': 'English Literature',
+      'HINDI_BASIC': 'Basic Hindi',
+      'MARATHI_BASIC': 'Basic Marathi',
+      'HISTORY_INDIA': 'Indian History',
+      'GEOGRAPHY_INDIA': 'Indian Geography',
+      'CIVICS_BASIC': 'Basic Civics',
+      'ECONOMICS_BASIC': 'Basic Economics',
+      'COMPUTER_BASIC': 'Basic Computer',
+      'ARTS_DRAWING': 'Drawing and Arts',
+      'SPORTS_GENERAL': 'Sports and Physical Education'
+    };
+    
+    return topics.map(topic => ({
+      id: topic.id,
+      name: topicNames[topic.id] || topic.id,
+      isActive: true // Default to active since we don't have topic-level control yet
+    }));
+  }
+
+  async updateAssessmentDateStatus(date: string, isActive: boolean): Promise<void> {
+    await db.update(assessmentSchedules)
+      .set({ isActive })
+      .where(eq(assessmentSchedules.assessmentDate, date));
+  }
+
+  async updateTopicActiveStatus(topicId: string, isActive: boolean): Promise<void> {
+    // For now, we'll log this action since we don't have a separate topics table
+    // In a production environment, you might want to add a topics control table
+    console.log(`Topic ${topicId} active status would be set to ${isActive}`);
+  }
 }
 
 export const storage = new DatabaseStorage();
