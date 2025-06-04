@@ -132,6 +132,33 @@ export default function Home() {
                 </CardHeader>
                 
                 <CardContent className="p-6">
+                  {/* Demo Numbers Section */}
+                  <div className="mb-6 p-4 bg-muted rounded-lg border">
+                    <h3 className="text-sm font-medium text-foreground mb-2 flex items-center">
+                      <User className="h-4 w-4 mr-2" />
+                      Demo Login Numbers
+                    </h3>
+                    <p className="text-xs text-muted-foreground mb-3">Use these mobile numbers to test the system:</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center justify-between p-2 bg-background rounded border">
+                        <span className="font-mono">9876543210</span>
+                        <span className="text-xs text-muted-foreground">Math Topic</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 bg-background rounded border">
+                        <span className="font-mono">9876543211</span>
+                        <span className="text-xs text-muted-foreground">Science Topic</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 bg-background rounded border">
+                        <span className="font-mono">9876543212</span>
+                        <span className="text-xs text-muted-foreground">English Topic</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 bg-background rounded border">
+                        <span className="font-mono">9876543213</span>
+                        <span className="text-xs text-muted-foreground">History Topic</span>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="max-w-md mx-auto">
                     <div className="mb-6">
                       <label className="block text-sm font-medium text-foreground mb-2">
