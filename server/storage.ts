@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { eq, and, gte, sql, desc, count } from "drizzle-orm";
+import { cache, questionCache, assessmentCache, feedbackCache, getCacheKey } from "./cache";
 import {
   users, teachers, batches, batchTeachers, questions, feedbackQuestions,
   examResults, examAnswers, trainerFeedback, topicFeedback, assessmentSchedules,
@@ -193,12 +194,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRandomQuestionsByTopic(topicId: string, count: number): Promise<Question[]> {
-    return await db
+    const cacheKey = getCacheKey.randomQuestions(topicId, count);
+    const cached = questionCache.get<Question[]>(cacheKey);
+    
+    if (cached) {
+      return cached;
+    }
+    
+    const result = await db
       .select()
       .from(questions)
       .where(eq(questions.topicId, topicId))
       .orderBy(sql`RANDOM()`)
       .limit(count);
+    
+    // Cache for shorter time since it's random
+    questionCache.set(cacheKey, result, 180); // 3 minutes
+    return result;
   }
 
   async createQuestion(question: InsertQuestion): Promise<Question> {
@@ -207,7 +219,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllFeedbackQuestions(): Promise<FeedbackQuestion[]> {
-    return await db.select().from(feedbackQuestions);
+    const cacheKey = getCacheKey.feedbackQuestions();
+    const cached = feedbackCache.get<FeedbackQuestion[]>(cacheKey);
+    
+    if (cached) {
+      return cached;
+    }
+    
+    const result = await db.select().from(feedbackQuestions);
+    feedbackCache.set(cacheKey, result);
+    return result;
   }
 
   async createFeedbackQuestion(feedbackQuestion: InsertFeedbackQuestion): Promise<FeedbackQuestion> {
@@ -239,6 +260,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async checkExamExists(mobile: string, topicId: string, date: string): Promise<boolean> {
+    const cacheKey = getCacheKey.examExists(mobile, topicId, date);
+    const cached = cache.get<boolean>(cacheKey);
+    
+    if (cached !== undefined) {
+      return cached;
+    }
+    
     const [result] = await db
       .select({ count: count() })
       .from(examResults)
@@ -249,7 +277,10 @@ export class DatabaseStorage implements IStorage {
           eq(examResults.assessmentDate, date)
         )
       );
-    return (result?.count || 0) > 0;
+    
+    const exists = (result?.count || 0) > 0;
+    cache.set(cacheKey, exists, 600); // 10 minutes
+    return exists;
   }
 
   async getExamResult(mobile: string, topicId: string, date?: string): Promise<ExamResult | undefined> {
