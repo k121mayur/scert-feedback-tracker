@@ -358,6 +358,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Get batch teachers
+  app.get("/api/admin/batches/:batchName/teachers", async (req, res) => {
+    try {
+      const { batchName } = req.params;
+      const teachers = await storage.getBatchTeachers(batchName);
+      res.json(teachers);
+    } catch (error) {
+      console.error("Error fetching batch teachers:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Admin: Create batch
   app.post("/api/admin/batches", async (req, res) => {
     try {

@@ -6,7 +6,9 @@ import { CsvUpload } from "@/components/csv-upload";
 import { Users, FileText, BarChart3, Shield, UserSearch } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 
 interface ExamStats {
   totalExams: number;
@@ -23,11 +25,57 @@ interface FeedbackStats {
 export default function Admin() {
   const [activeTab, setActiveTab] = useState("batches");
   const [, setLocation] = useLocation();
+  const [mobile, setMobile] = useState("");
+  const [teacherInfo, setTeacherInfo] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
   const { data: stats } = useQuery({
     queryKey: ['/api/admin/stats'],
     enabled: activeTab === "reports",
   });
+
+  const handleMobileChange = (value: string) => {
+    const numericValue = value.replace(/[^0-9]/g, '').slice(0, 10);
+    setMobile(numericValue);
+  };
+
+  const searchTeacher = async () => {
+    if (mobile.length !== 10) {
+      toast({
+        title: "Invalid Mobile Number",
+        description: "Please enter a valid 10-digit mobile number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/admin/teacher-by-mobile/${mobile}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTeacherInfo(data);
+        setLocation('/admin/teacher-details');
+      } else {
+        setTeacherInfo(null);
+        toast({
+          title: "Teacher Not Found",
+          description: "No teacher found with this mobile number.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error searching teacher:", error);
+      toast({
+        title: "Error",
+        description: "Failed to search teacher. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">

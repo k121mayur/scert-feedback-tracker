@@ -61,7 +61,7 @@ export function BatchTable() {
   });
 
   const { data: batchTeachers = [] } = useQuery({
-    queryKey: ['/api/admin/batches', selectedBatch, 'teachers'],
+    queryKey: [`/api/admin/batches/${selectedBatch}/teachers`],
     enabled: !!selectedBatch && isViewDialogOpen,
   });
 
