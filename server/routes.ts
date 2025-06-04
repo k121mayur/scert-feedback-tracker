@@ -1,0 +1,358 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { z } from "zod";
+import multer from "multer";
+import csv from "csv-parse";
+
+const upload = multer({ storage: multer.memoryStorage() });
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Get topic data by mobile number
+  app.get("/api/topic-by-mobile/:mobile", async (req, res) => {
+    try {
+      const mobile = req.params.mobile;
+      
+      if (!mobile || mobile.length !== 10) {
+        return res.status(400).json({ success: false, message: "Invalid mobile number" });
+      }
+
+      const batchTeacher = await storage.getBatchTeacherByMobile(mobile);
+      
+      if (!batchTeacher) {
+        return res.json({ success: false, message: "Question paper is no longer active" });
+      }
+
+      res.json({
+        success: true,
+        topic_id: batchTeacher.topicId,
+        batch_name: batchTeacher.batchName,
+        district: batchTeacher.district
+      });
+    } catch (error) {
+      console.error("Error fetching topic:", error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  });
+
+  // Get questions for exam
+  app.get("/api/questions/:topicId/:mobile", async (req, res) => {
+    try {
+      const { topicId, mobile } = req.params;
+      
+      // Check if teacher is eligible
+      const batchTeacher = await storage.getBatchTeacherByMobile(mobile);
+      if (!batchTeacher || batchTeacher.topicId !== topicId) {
+        return res.json({ status: "error", message: "Invalid access or exam expired" });
+      }
+
+      // Check if already attempted
+      const existingResult = await storage.getExamResult(mobile, topicId);
+      if (existingResult) {
+        return res.json({ status: "error", message: "Exam already attempted" });
+      }
+
+      const questions = await storage.getQuestionsByTopic(topicId, 10);
+      
+      if (questions.length === 0) {
+        return res.json({ status: "error", message: "No questions available for this topic" });
+      }
+
+      res.json({
+        status: "success",
+        questions: questions.map(q => ({
+          question: q.question,
+          option_a: q.optionA,
+          option_b: q.optionB,
+          option_c: q.optionC,
+          option_d: q.optionD
+        }))
+      });
+    } catch (error) {
+      console.error("Error fetching questions:", error);
+      res.status(500).json({ status: "error", message: "Server error" });
+    }
+  });
+
+  // Submit exam answers
+  app.post("/api/submit-exam", async (req, res) => {
+    try {
+      const examSchema = z.object({
+        topic_id: z.string(),
+        mobile: z.string().length(10),
+        batch_name: z.string(),
+        district: z.string(),
+        questions: z.array(z.string()),
+        answers: z.array(z.string().optional())
+      });
+
+      const data = examSchema.parse(req.body);
+      
+      // Check if already submitted
+      const existingResult = await storage.getExamResult(data.mobile, data.topic_id);
+      if (existingResult) {
+        return res.status(400).json({ message: "Exam already submitted" });
+      }
+
+      // Get questions with correct answers
+      const questions = await storage.getQuestionsByTopic(data.topic_id, 10);
+      
+      let correctCount = 0;
+      let wrongCount = 0;
+      let unansweredCount = 0;
+      
+      const examAnswers = questions.map((question, index) => {
+        const selectedAnswer = data.answers[index];
+        const isCorrect = selectedAnswer === question.correctAnswer;
+        
+        if (!selectedAnswer) {
+          unansweredCount++;
+        } else if (isCorrect) {
+          correctCount++;
+        } else {
+          wrongCount++;
+        }
+        
+        return {
+          mobile: data.mobile,
+          topicId: data.topic_id,
+          question: question.question,
+          selectedAnswer: selectedAnswer || null,
+          correctAnswer: question.correctAnswer,
+          isCorrect
+        };
+      });
+
+      // Submit exam result
+      const examResult = await storage.submitExamResult({
+        mobile: data.mobile,
+        topicId: data.topic_id,
+        batchName: data.batch_name,
+        district: data.district,
+        correctCount,
+        wrongCount,
+        unansweredCount,
+        totalQuestions: questions.length
+      });
+
+      // Submit individual answers
+      await storage.submitExamAnswers(examAnswers);
+
+      res.json({
+        success: true,
+        result: {
+          correctCount,
+          wrongCount,
+          unansweredCount,
+          totalQuestions: questions.length,
+          examId: examResult.id
+        }
+      });
+    } catch (error) {
+      console.error("Error submitting exam:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get feedback questions
+  app.get("/api/feedback-questions", async (req, res) => {
+    try {
+      const questions = await storage.getAllFeedbackQuestions();
+      res.json(questions);
+    } catch (error) {
+      console.error("Error fetching feedback questions:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Check if topic feedback exists
+  app.get("/api/check-topic-feedback", async (req, res) => {
+    try {
+      const { topic, mobile } = req.query;
+      
+      if (!topic || !mobile) {
+        return res.status(400).json({ message: "Topic and mobile are required" });
+      }
+
+      const exists = await storage.checkTopicExists(topic as string, mobile as string);
+      res.json(exists ? "exists" : "not_exists");
+    } catch (error) {
+      console.error("Error checking topic feedback:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Submit feedback
+  app.post("/api/submit-feedback", async (req, res) => {
+    try {
+      const feedbackSchema = z.object({
+        topic_name: z.string(),
+        mobile_no: z.string().length(10),
+        batch_name: z.string(),
+        district: z.string(),
+        questions: z.array(z.string()),
+        feedback_answers: z.array(z.string())
+      });
+
+      const data = feedbackSchema.parse(req.body);
+
+      // Check if feedback already exists
+      const exists = await storage.checkTopicExists(data.topic_name, data.mobile_no);
+      if (exists) {
+        return res.status(400).json({ message: "Feedback already submitted" });
+      }
+
+      // Prepare feedback entries
+      const feedbackEntries = data.questions.map((question, index) => ({
+        topicId: data.topic_name,
+        mobile: data.mobile_no,
+        feedbackQue: question,
+        feedback: data.feedback_answers[index],
+        batchName: data.batch_name,
+        district: data.district
+      }));
+
+      // Submit feedback
+      await storage.submitTrainerFeedback(feedbackEntries);
+
+      // Create topic feedback record to prevent duplicates
+      await storage.createTopicFeedback({
+        topicName: data.topic_name,
+        mobile: data.mobile_no
+      });
+
+      res.json("success");
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Admin: Get all batches
+  app.get("/api/admin/batches", async (req, res) => {
+    try {
+      const batches = await storage.getAllBatches();
+      res.json(batches);
+    } catch (error) {
+      console.error("Error fetching batches:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Admin: Create batch
+  app.post("/api/admin/batches", async (req, res) => {
+    try {
+      const batchSchema = z.object({
+        batchName: z.string(),
+        district: z.string(),
+        coordinatorName: z.string(),
+        serviceType: z.string(),
+        trainingGroup: z.string()
+      });
+
+      const data = batchSchema.parse(req.body);
+      const batch = await storage.createBatch(data);
+      res.json(batch);
+    } catch (error) {
+      console.error("Error creating batch:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Admin: Delete batch
+  app.delete("/api/admin/batches/:batchName", async (req, res) => {
+    try {
+      const { batchName } = req.params;
+      const success = await storage.deleteBatch(batchName);
+      
+      if (success) {
+        res.json({ message: "Batch deleted successfully" });
+      } else {
+        res.status(404).json({ message: "Batch not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting batch:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Admin: Get batch teachers
+  app.get("/api/admin/batches/:batchName/teachers", async (req, res) => {
+    try {
+      const { batchName } = req.params;
+      const teachers = await storage.getBatchTeachers(batchName);
+      res.json(teachers);
+    } catch (error) {
+      console.error("Error fetching batch teachers:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Admin: Upload and verify CSV
+  app.post("/api/admin/verify-csv", upload.single("csvFile"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const csvData = req.file.buffer.toString();
+      const records: any[] = [];
+
+      // Parse CSV
+      await new Promise((resolve, reject) => {
+        csv.parse(csvData, { columns: true }, (err, output) => {
+          if (err) reject(err);
+          else {
+            records.push(...output);
+            resolve(output);
+          }
+        });
+      });
+
+      // Verify payment IDs
+      const verifiedRecords = await Promise.all(
+        records.map(async (record) => {
+          const paymentId = record.pay_id || record.payment_id || "";
+          const exists = paymentId ? await storage.checkPaymentId(paymentId) : false;
+          
+          return {
+            ...record,
+            exists: exists ? "Yes" : "No"
+          };
+        })
+      );
+
+      res.json({
+        success: true,
+        data: verifiedRecords,
+        summary: {
+          total: verifiedRecords.length,
+          verified: verifiedRecords.filter(r => r.exists === "Yes").length,
+          unverified: verifiedRecords.filter(r => r.exists === "No").length
+        }
+      });
+    } catch (error) {
+      console.error("Error processing CSV:", error);
+      res.status(500).json({ message: "Error processing CSV file" });
+    }
+  });
+
+  // Admin: Get statistics
+  app.get("/api/admin/stats", async (req, res) => {
+    try {
+      const examStats = await storage.getExamStats();
+      const feedbackStats = await storage.getFeedbackStats();
+
+      res.json({
+        examStats,
+        feedbackStats
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
