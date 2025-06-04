@@ -109,9 +109,10 @@ export default function AddTeacher() {
               <Button
                 variant="ghost"
                 onClick={() => setLocation('/admin')}
-                className="mr-4"
+                className="mr-4 flex items-center"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back
               </Button>
               <UserPlus className="h-8 w-8 text-primary mr-3" />
               <h1 className="text-xl font-medium text-foreground">Add New Teacher</h1>

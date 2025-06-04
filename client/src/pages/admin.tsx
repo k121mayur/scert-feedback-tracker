@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BatchTable } from "@/components/batch-table";
@@ -49,6 +49,11 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  // Assessment Control state
+  const [assessmentLoading, setAssessmentLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [dateTopicMappings, setDateTopicMappings] = useState<DateTopicMapping[]>([]);
+
   const { data: stats } = useQuery({
     queryKey: ['/api/admin/stats'],
     enabled: activeTab === "reports",
@@ -95,6 +100,220 @@ export default function Admin() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Assessment Control Functions
+  const loadAssessmentData = async () => {
+    setAssessmentLoading(true);
+    try {
+      const [datesResponse, topicsResponse] = await Promise.all([
+        fetch('/api/admin/assessment-control/dates'),
+        fetch('/api/admin/assessment-control/topics')
+      ]);
+      
+      const dates = await datesResponse.json();
+      const topics = await topicsResponse.json();
+      
+      // Group topics by dates (for simplicity, we'll show all topics for each date)
+      const mappings = dates.map((date: AssessmentDate) => ({
+        ...date,
+        topics: topics
+      }));
+      
+      setDateTopicMappings(mappings);
+    } catch (error) {
+      console.error("Error loading assessment data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load assessment data.",
+        variant: "destructive",
+      });
+    } finally {
+      setAssessmentLoading(false);
+    }
+  };
+
+  const handleDateToggle = (date: string, isActive: boolean) => {
+    setDateTopicMappings(prev => 
+      prev.map(mapping => 
+        mapping.date === date 
+          ? { ...mapping, isActive }
+          : mapping
+      )
+    );
+  };
+
+  const handleTopicToggle = (date: string, topicId: string, isActive: boolean) => {
+    setDateTopicMappings(prev => 
+      prev.map(mapping => 
+        mapping.date === date 
+          ? {
+              ...mapping,
+              topics: mapping.topics.map(topic =>
+                topic.id === topicId ? { ...topic, isActive } : topic
+              )
+            }
+          : mapping
+      )
+    );
+  };
+
+  const saveAssessmentChanges = async () => {
+    setSaving(true);
+    try {
+      // Save date settings
+      await apiRequest('PUT', '/api/admin/assessment-control/dates', {
+        dates: dateTopicMappings.map(({ date, isActive }) => ({ date, isActive }))
+      });
+
+      // Save topic settings (flatten all topics)
+      const allTopics = dateTopicMappings.flatMap(mapping => mapping.topics);
+      const uniqueTopics = allTopics.reduce((acc: Topic[], topic) => {
+        const existing = acc.find(t => t.id === topic.id);
+        if (!existing) {
+          acc.push(topic);
+        }
+        return acc;
+      }, []);
+
+      await apiRequest('PUT', '/api/admin/assessment-control/topics', {
+        topics: uniqueTopics
+      });
+
+      toast({
+        title: "Success",
+        description: "Assessment settings saved successfully!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save changes.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-IN', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  // Assessment Control Component
+  const AssessmentControlSection = () => {
+    useEffect(() => {
+      if (activeTab === 'control') {
+        loadAssessmentData();
+      }
+    }, [activeTab]);
+
+    return (
+      <div className="space-y-6">
+        {/* Header with Save Button */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-semibold flex items-center">
+              <Settings className="mr-2 h-5 w-5" />
+              Assessment Control Panel
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Control which dates and topics are available for teacher assessments
+            </p>
+          </div>
+          <Button onClick={saveAssessmentChanges} disabled={saving}>
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+
+        {assessmentLoading ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Loading assessment data...</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {dateTopicMappings.map((mapping) => (
+              <Card key={mapping.date}>
+                <CardHeader>
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id={`date-${mapping.date}`}
+                      checked={mapping.isActive}
+                      onCheckedChange={(checked) => 
+                        handleDateToggle(mapping.date, checked as boolean)
+                      }
+                    />
+                    <div className="flex-1">
+                      <CardTitle className="flex items-center">
+                        <Calendar className="mr-2 h-5 w-5" />
+                        {formatDate(mapping.date)}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">{mapping.date}</p>
+                    </div>
+                    <div className={`px-2 py-1 rounded text-xs ${
+                      mapping.isActive 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                    }`}>
+                      {mapping.isActive ? 'Active' : 'Hidden'}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex items-center mb-3">
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      <span className="font-medium">Available Topics</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {mapping.topics.map((topic) => (
+                        <div key={`${mapping.date}-${topic.id}`} className="flex items-center space-x-2 p-2 border rounded">
+                          <Checkbox
+                            id={`topic-${mapping.date}-${topic.id}`}
+                            checked={topic.isActive}
+                            onCheckedChange={(checked) => 
+                              handleTopicToggle(mapping.date, topic.id, checked as boolean)
+                            }
+                          />
+                          <label 
+                            htmlFor={`topic-${mapping.date}-${topic.id}`}
+                            className="flex-1 cursor-pointer text-sm"
+                          >
+                            {topic.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Instructions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Instructions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>• Check date boxes to make assessment dates available to teachers</p>
+              <p>• Check topic boxes to make specific topics available for each date</p>
+              <p>• Uncheck to temporarily hide dates or topics from teacher selection</p>
+              <p>• Changes take effect immediately after saving</p>
+              <p>• Teachers will only see active/checked dates and topics</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   };
 
   return (
