@@ -143,6 +143,16 @@ export default function Feedback() {
       const questionTexts = questions.map(q => q.feedbackQues);
       const feedbackAnswers = questions.map(q => answers[q.id]);
 
+      console.log('Feedback Data:', feedbackData);
+      console.log('Submitting feedback with data:', {
+        topic_name: feedbackData.topic,
+        mobile_no: feedbackData.mobile,
+        batch_name: feedbackData.batch,
+        district: feedbackData.district,
+        questions: questionTexts,
+        feedback_answers: feedbackAnswers,
+      });
+
       const response = await fetch('/api/submit-feedback', {
         method: 'POST',
         headers: {
@@ -206,13 +216,24 @@ export default function Feedback() {
   const showThankYouMessage = () => {
     toast({
       title: "Thank You!",
-      description: "Your feedback has been submitted successfully.",
+      description: "Your feedback has been submitted successfully. Redirecting to home page...",
+      action: (
+        <button 
+          onClick={() => setLocation('/')}
+          className="bg-primary text-primary-foreground px-3 py-1 rounded text-sm hover:bg-primary/90"
+        >
+          Go Home
+        </button>
+      ),
     });
+    
+    // Clear exam data
+    sessionStorage.removeItem('examResult');
     
     // Redirect to home after a delay
     setTimeout(() => {
       setLocation('/');
-    }, 2000);
+    }, 3000);
   };
 
   if (loading) {
