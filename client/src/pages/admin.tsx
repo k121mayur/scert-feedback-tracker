@@ -56,7 +56,8 @@ export default function Admin() {
       if (response.ok) {
         const data = await response.json();
         setTeacherInfo(data);
-        setLocation('/admin/teacher-details');
+        // Navigate with mobile number as query parameter to avoid double search
+        setLocation(`/admin/teacher-details?mobile=${mobile}`);
       } else {
         setTeacherInfo(null);
         toast({
@@ -187,6 +188,34 @@ export default function Admin() {
 
           {/* Reports Tab */}
           <TabsContent value="reports">
+            {/* System Overview */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+              <div className="bg-blue-50 rounded-lg p-4 text-center border border-blue-200">
+                <div className="text-2xl font-bold text-blue-600">{(stats as any)?.systemStats?.totalTeachers || 0}</div>
+                <div className="text-sm text-blue-600 font-medium">Total Teachers</div>
+              </div>
+              <div className="bg-green-50 rounded-lg p-4 text-center border border-green-200">
+                <div className="text-2xl font-bold text-green-600">{(stats as any)?.systemStats?.totalDistricts || 0}</div>
+                <div className="text-sm text-green-600 font-medium">Districts</div>
+              </div>
+              <div className="bg-purple-50 rounded-lg p-4 text-center border border-purple-200">
+                <div className="text-2xl font-bold text-purple-600">{(stats as any)?.systemStats?.totalBatches || 0}</div>
+                <div className="text-sm text-purple-600 font-medium">Total Batches</div>
+              </div>
+              <div className="bg-orange-50 rounded-lg p-4 text-center border border-orange-200">
+                <div className="text-2xl font-bold text-orange-600">{(stats as any)?.systemStats?.totalSubjects || 0}</div>
+                <div className="text-sm text-orange-600 font-medium">Subjects</div>
+              </div>
+              <div className="bg-indigo-50 rounded-lg p-4 text-center border border-indigo-200">
+                <div className="text-2xl font-bold text-indigo-600">{(stats as any)?.systemStats?.totalQuestions || 0}</div>
+                <div className="text-sm text-indigo-600 font-medium">Questions</div>
+              </div>
+              <div className="bg-emerald-50 rounded-lg p-4 text-center border border-emerald-200">
+                <div className="text-2xl font-bold text-emerald-600">{(stats as any)?.systemStats?.totalAssessmentDates || 0}</div>
+                <div className="text-sm text-emerald-600 font-medium">Assessment Dates</div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               {/* Exam Statistics */}
               <Card className="material-shadow-2">

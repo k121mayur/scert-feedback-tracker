@@ -398,6 +398,47 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
+
+  async getSystemStats(): Promise<{
+    totalTeachers: number;
+    totalDistricts: number;
+    totalBatches: number;
+    totalSubjects: number;
+    totalQuestions: number;
+    totalAssessmentDates: number;
+  }> {
+    try {
+      const [teachersCount] = await db.select({ count: count() }).from(teachers);
+      const [batchesCount] = await db.select({ count: count() }).from(batches);
+      const [questionsCount] = await db.select({ count: count() }).from(questions);
+      const [assessmentDatesCount] = await db.select({ count: count() }).from(assessmentSchedules);
+      
+      // Get unique districts from teachers table
+      const districts = await db.selectDistinct({ district: teachers.district }).from(teachers);
+      
+      // Get unique subjects from questions table
+      const subjects = await db.selectDistinct({ topicId: questions.topicId }).from(questions);
+
+      return {
+        totalTeachers: teachersCount?.count || 0,
+        totalDistricts: districts.length || 0,
+        totalBatches: batchesCount?.count || 0,
+        totalSubjects: subjects.length || 0,
+        totalQuestions: questionsCount?.count || 0,
+        totalAssessmentDates: assessmentDatesCount?.count || 0,
+      };
+    } catch (error) {
+      console.error("Error fetching system stats:", error);
+      return {
+        totalTeachers: 0,
+        totalDistricts: 0,
+        totalBatches: 0,
+        totalSubjects: 0,
+        totalQuestions: 0,
+        totalAssessmentDates: 0,
+      };
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

@@ -62,13 +62,28 @@ export default function TeacherDetails() {
   const [searched, setSearched] = useState(false);
   const { toast } = useToast();
 
+  // Check for mobile number in URL parameters on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mobileParam = urlParams.get('mobile');
+    if (mobileParam && mobileParam.length === 10) {
+      setMobile(mobileParam);
+      // Automatically search for the teacher
+      setTimeout(() => {
+        searchTeacher(mobileParam);
+      }, 100);
+    }
+  }, []);
+
   const handleMobileChange = (value: string) => {
     const numericValue = value.replace(/[^0-9]/g, '').slice(0, 10);
     setMobile(numericValue);
   };
 
-  const searchTeacher = async () => {
-    if (mobile.length !== 10) {
+  const searchTeacher = async (mobileNumber?: string) => {
+    const searchMobile = mobileNumber || mobile;
+    
+    if (searchMobile.length !== 10) {
       toast({
         title: "Invalid Mobile Number",
         description: "Please enter a valid 10-digit mobile number.",
@@ -82,7 +97,7 @@ export default function TeacherDetails() {
 
     try {
       // Fetch teacher information
-      const teacherResponse = await fetch(`/api/admin/teacher-by-mobile/${mobile}`);
+      const teacherResponse = await fetch(`/api/admin/teacher-by-mobile/${searchMobile}`);
       
       if (!teacherResponse.ok) {
         setTeacherInfo(null);
@@ -101,12 +116,12 @@ export default function TeacherDetails() {
       setTeacherInfo(teacherData);
 
       // Fetch exam records
-      const examResponse = await fetch(`/api/admin/teacher-exams/${mobile}`);
+      const examResponse = await fetch(`/api/admin/teacher-exams/${searchMobile}`);
       const examData = examResponse.ok ? await examResponse.json() : [];
       setExamRecords(examData);
 
       // Fetch feedback records
-      const feedbackResponse = await fetch(`/api/admin/teacher-feedback/${mobile}`);
+      const feedbackResponse = await fetch(`/api/admin/teacher-feedback/${searchMobile}`);
       const feedbackData = feedbackResponse.ok ? await feedbackResponse.json() : [];
       setFeedbackRecords(feedbackData);
 

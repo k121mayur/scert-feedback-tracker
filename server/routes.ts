@@ -473,10 +473,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const examStats = await storage.getExamStats();
       const feedbackStats = await storage.getFeedbackStats();
+      const systemStats = await storage.getSystemStats();
 
       res.json({
         examStats,
-        feedbackStats
+        feedbackStats,
+        systemStats
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
