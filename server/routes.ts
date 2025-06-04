@@ -169,7 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Submit exam answers (ASYNC processing for 40K users)
+  // Submit exam answers (Hybrid processing with fallback)
   app.post("/api/submit-exam", rateLimit(10, 60000), async (req, res) => {
     try {
       const examSchema = z.object({
@@ -191,17 +191,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Exam already submitted for this date" });
       }
 
-      // ASYNC PROCESSING: Add to queue instead of blocking
-      const examId = examQueue.enqueue(data);
+      // Try synchronous processing first for reliability
+      try {
+        // Get questions with correct answers
+        const questions = await storage.getRandomQuestionsByTopic(data.topic_id, 5);
+        
+        let correctCount = 0;
+        let wrongCount = 0;
+        let unansweredCount = 0;
+        
+        const examAnswers = questions.map((question, index) => {
+          const selectedAnswer = data.answers[index];
+          const isCorrect = selectedAnswer === question.correctAnswer;
+          
+          if (!selectedAnswer) {
+            unansweredCount++;
+          } else if (isCorrect) {
+            correctCount++;
+          } else {
+            wrongCount++;
+          }
+          
+          return {
+            mobile: data.mobile,
+            topicId: data.topic_id,
+            question: question.question,
+            selectedAnswer: selectedAnswer || null,
+            correctAnswer: question.correctAnswer,
+            isCorrect
+          };
+        });
 
-      // Return immediately with processing ID
-      res.json({
-        success: true,
-        processing: true,
-        examId: examId,
-        message: "Exam submitted for processing. Check status using the exam ID.",
-        statusEndpoint: `/api/exam-status/${examId}`
-      });
+        // Submit exam result
+        const examResult = await storage.submitExamResult({
+          mobile: data.mobile,
+          topicId: data.topic_id,
+          topicName: data.topic_name,
+          assessmentDate: data.assessment_date,
+          batchName: data.batch_name,
+          district: data.district,
+          correctCount,
+          wrongCount,
+          unansweredCount,
+          totalQuestions: questions.length
+        });
+
+        // Submit individual answers
+        await storage.submitExamAnswers(examAnswers);
+
+        // Return synchronous result
+        res.json({
+          success: true,
+          processing: false,
+          result: {
+            correctCount,
+            wrongCount,
+            unansweredCount,
+            totalQuestions: questions.length,
+            examId: examResult.id,
+            mobile: data.mobile,
+            topicId: data.topic_id,
+            topicName: data.topic_name,
+            assessmentDate: data.assessment_date,
+            batch: data.batch_name,
+            district: data.district
+          }
+        });
+      } catch (syncError) {
+        console.error("Synchronous processing failed, falling back to async:", syncError);
+        
+        // Fallback to async processing
+        const examId = examQueue.enqueue(data);
+
+        res.json({
+          success: true,
+          processing: true,
+          examId: examId,
+          message: "Exam submitted for processing. Check status using the exam ID.",
+          statusEndpoint: `/api/exam-status/${examId}`
+        });
+      }
     } catch (error) {
       console.error("Error submitting exam:", error);
       res.status(500).json({ message: "Server error" });
