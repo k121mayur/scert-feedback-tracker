@@ -213,7 +213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/exam-status/:examId", async (req, res) => {
     try {
       const { examId } = req.params;
-      const status = examQueue.getStatus(examId);
+      const status = await hybridQueue.getExamStatus(examId);
       
       if (!status) {
         return res.status(404).json({ message: "Exam ID not found" });

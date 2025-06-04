@@ -153,12 +153,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllAssessmentDates(): Promise<string[]> {
-    const result = await db.select({ date: assessmentSchedules.assessmentDate })
-      .from(assessmentSchedules)
-      .where(eq(assessmentSchedules.isActive, true))
-      .groupBy(assessmentSchedules.assessmentDate)
-      .orderBy(assessmentSchedules.assessmentDate);
-    return result.map(r => r.date);
+    const cacheKey = getCacheKey.assessmentDates();
+    const cached = assessmentCache.get(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const result = await db.select({ date: assessmentSchedules.assessmentDate })
+        .from(assessmentSchedules)
+        .where(eq(assessmentSchedules.isActive, true))
+        .groupBy(assessmentSchedules.assessmentDate)
+        .orderBy(assessmentSchedules.assessmentDate)
+        .limit(50); // Performance limit for 40K users
+      
+      const dates = result.map(r => r.date);
+      assessmentCache.set(cacheKey, dates, 900); // 15 minute cache
+      return dates;
+    } catch (error) {
+      console.error('Database timeout for assessment dates:', error);
+      // Return empty array to prevent app crash
+      return [];
+    }
   }
 
   async createAssessmentSchedule(schedule: InsertAssessmentSchedule): Promise<AssessmentSchedule> {
