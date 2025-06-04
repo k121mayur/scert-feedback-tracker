@@ -34,7 +34,23 @@ export default function Feedback() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    // Parse URL parameters
+    // First try to get feedback data from sessionStorage (from exam results)
+    const examResultData = sessionStorage.getItem('examResult');
+    
+    if (examResultData) {
+      const parsedData = JSON.parse(examResultData);
+      const feedbackInfo = {
+        mobile: parsedData.mobile,
+        topic: parsedData.topicName || parsedData.topic,
+        batch: parsedData.batch || "General",
+        district: parsedData.district || "General"
+      };
+      setFeedbackData(feedbackInfo);
+      checkExistingFeedback(feedbackInfo.mobile, feedbackInfo.topic);
+      return;
+    }
+
+    // Fallback to URL parameters (legacy system)
     const urlParams = new URLSearchParams(window.location.search);
     const mobile = urlParams.get('mobile');
     const topic = urlParams.get('topic');

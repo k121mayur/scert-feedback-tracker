@@ -53,20 +53,21 @@ export function QuestionCard({
             <div className="space-y-3">
               {options.map((option) => (
                 <div key={option.value} className="exam-option">
-                  <div className="flex items-start">
+                  <Label
+                    htmlFor={`q${questionNumber}_${option.value}`}
+                    className="flex items-start w-full p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => onAnswerSelect(option.value)}
+                  >
                     <RadioGroupItem
                       value={option.value}
                       id={`q${questionNumber}_${option.value}`}
                       className="mt-1 mr-3"
                     />
-                    <Label
-                      htmlFor={`q${questionNumber}_${option.value}`}
-                      className="flex-1 cursor-pointer"
-                    >
+                    <div className="flex-1">
                       <span className="font-medium text-primary mr-2">{option.value}.</span>
                       <span className="text-foreground">{option.text}</span>
-                    </Label>
-                  </div>
+                    </div>
+                  </Label>
                 </div>
               ))}
             </div>
