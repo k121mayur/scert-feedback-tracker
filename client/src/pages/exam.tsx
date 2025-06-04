@@ -196,9 +196,11 @@ export default function Exam() {
         sessionStorage.setItem('examResult', JSON.stringify({
           ...result.result,
           mobile: examData?.mobile,
-          topic: examData?.topic,
-          batch: examData?.batch,
-          district: examData?.district,
+          topic: examData?.topicId || examData?.topic,
+          topicName: examData?.topicName || examData?.topic,
+          assessmentDate: examData?.date || new Date().toISOString().split('T')[0],
+          batch: examData?.batch || "General",
+          district: examData?.district || "General",
         }));
         
         setLocation('/results');

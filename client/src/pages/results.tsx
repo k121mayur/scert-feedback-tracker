@@ -12,6 +12,8 @@ interface ExamResult {
   totalQuestions: number;
   mobile: string;
   topic: string;
+  topicName?: string;
+  assessmentDate?: string;
   batch: string;
   district: string;
 }

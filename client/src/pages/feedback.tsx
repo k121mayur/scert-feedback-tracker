@@ -170,7 +170,8 @@ export default function Feedback() {
 
       if (response.ok) {
         const result = await response.text();
-        if (result === "success") {
+        console.log('Feedback submission result:', result);
+        if (result === "success" || result.includes("success")) {
           // Show thank you message
           showThankYouMessage();
         } else {
