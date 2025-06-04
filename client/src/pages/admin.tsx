@@ -501,19 +501,19 @@ export default function Admin() {
                     <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
                       <span className="text-muted-foreground">Total Exams Conducted</span>
                       <span className="font-bold text-primary">
-                        {stats?.examStats?.totalExams || 0}
+                        {(stats as any)?.examStats?.totalExams || 0}
                       </span>
                     </div>
                     <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
                       <span className="text-muted-foreground">Average Score</span>
                       <span className="font-bold text-secondary">
-                        {stats?.examStats?.averageScore || 0}/10
+                        {(stats as any)?.examStats?.averageScore || 0}/10
                       </span>
                     </div>
                     <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
                       <span className="text-muted-foreground">Pass Rate</span>
                       <span className="font-bold text-secondary">
-                        {stats?.examStats?.passRate || 0}%
+                        {(stats as any)?.examStats?.passRate || 0}%
                       </span>
                     </div>
                   </div>
@@ -533,19 +533,19 @@ export default function Admin() {
                     <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
                       <span className="text-muted-foreground">Feedback Responses</span>
                       <span className="font-bold text-primary">
-                        {stats?.feedbackStats?.totalFeedback || 0}
+                        {(stats as any)?.feedbackStats?.totalFeedback || 0}
                       </span>
                     </div>
                     <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
                       <span className="text-muted-foreground">Avg. Training Quality</span>
                       <span className="font-bold text-secondary">
-                        {stats?.feedbackStats?.averageRating || 0}/5
+                        {(stats as any)?.feedbackStats?.averageRating || 0}/5
                       </span>
                     </div>
                     <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
                       <span className="text-muted-foreground">Satisfaction Rate</span>
                       <span className="font-bold text-secondary">
-                        {stats?.feedbackStats?.satisfactionRate || 0}%
+                        {(stats as any)?.feedbackStats?.satisfactionRate || 0}%
                       </span>
                     </div>
                   </div>
