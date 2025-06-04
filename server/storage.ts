@@ -91,6 +91,12 @@ export interface IStorage {
     totalQuestions: number;
     totalAssessmentDates: number;
   }>;
+
+  // Assessment control
+  getAssessmentControlDates(): Promise<{ date: string; isActive: boolean; }[]>;
+  getAssessmentControlTopics(): Promise<{ id: string; name: string; isActive: boolean; }[]>;
+  updateAssessmentDateStatus(date: string, isActive: boolean): Promise<void>;
+  updateTopicActiveStatus(topicId: string, isActive: boolean): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {

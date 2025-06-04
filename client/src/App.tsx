@@ -12,6 +12,7 @@ import Admin from "@/pages/admin";
 import TeacherDetails from "@/pages/teacher-details";
 import AddTeacher from "@/pages/add-teacher";
 import EditTeacher from "@/pages/edit-teacher";
+import AssessmentControl from "@/pages/assessment-control";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -26,6 +27,7 @@ function Router() {
       <Route path="/admin/teacher-details" component={TeacherDetails} />
       <Route path="/admin/add-teacher" component={AddTeacher} />
       <Route path="/admin/edit-teacher" component={EditTeacher} />
+      <Route path="/admin/assessment-control" component={AssessmentControl} />
       <Route component={NotFound} />
     </Switch>
   );

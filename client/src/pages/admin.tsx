@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BatchTable } from "@/components/batch-table";
 import { CsvUpload } from "@/components/csv-upload";
-import { Users, FileText, BarChart3, Shield, UserSearch, ArrowLeft, Plus, Edit } from "lucide-react";
+import { Users, FileText, BarChart3, Shield, UserSearch, ArrowLeft, Plus, Edit, Settings } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -201,6 +201,30 @@ export default function Admin() {
                     >
                       <Edit className="h-4 w-4" />
                       <span>Edit Teacher Records</span>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Assessment Control Section */}
+              <Card className="material-shadow-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Settings className="h-5 w-5" />
+                    <span>Assessment Control</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Control which dates and topics are available for teacher assessments
+                    </p>
+                    <Button 
+                      onClick={() => setLocation('/admin/assessment-control')}
+                      className="flex items-center space-x-2"
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Manage Assessment Availability</span>
                     </Button>
                   </div>
                 </CardContent>
