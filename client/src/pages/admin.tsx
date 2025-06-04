@@ -3,8 +3,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BatchTable } from "@/components/batch-table";
 import { CsvUpload } from "@/components/csv-upload";
-import { Users, FileText, BarChart3, Shield } from "lucide-react";
+import { Users, FileText, BarChart3, Shield, UserSearch } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 
 interface ExamStats {
   totalExams: number;
@@ -20,6 +22,7 @@ interface FeedbackStats {
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState("batches");
+  const [, setLocation] = useLocation();
 
   const { data: stats } = useQuery({
     queryKey: ['/api/admin/stats'],
@@ -31,12 +34,23 @@ export default function Admin() {
       {/* Admin Header */}
       <header className="bg-white shadow-sm border-b border-border p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center space-x-3">
-            <Shield className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-2xl font-medium text-foreground">Administration Panel</h1>
-              <p className="text-muted-foreground mt-1">Manage batches, teachers, and system data</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Shield className="h-8 w-8 text-primary" />
+              <div>
+                <h1 className="text-2xl font-medium text-foreground">Administration Panel</h1>
+                <p className="text-muted-foreground mt-1">Manage batches, teachers, and system data</p>
+              </div>
             </div>
+            
+            <Button
+              onClick={() => setLocation('/admin/teacher-details')}
+              className="flex items-center space-x-2"
+              variant="outline"
+            >
+              <UserSearch className="h-4 w-4" />
+              <span>Teacher Details</span>
+            </Button>
           </div>
         </div>
       </header>

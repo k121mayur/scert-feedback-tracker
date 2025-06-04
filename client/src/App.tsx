@@ -9,6 +9,7 @@ import Exam from "@/pages/exam";
 import Results from "@/pages/results";
 import Feedback from "@/pages/feedback";
 import Admin from "@/pages/admin";
+import TeacherDetails from "@/pages/teacher-details";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/results" component={Results} />
       <Route path="/feedback" component={Feedback} />
       <Route path="/admin" component={Admin} />
+      <Route path="/admin/teacher-details" component={TeacherDetails} />
       <Route component={NotFound} />
     </Switch>
   );
