@@ -317,6 +317,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Get teacher by mobile number
+  app.get("/api/admin/teacher-by-mobile/:mobile", async (req, res) => {
+    try {
+      const { mobile } = req.params;
+      const teacher = await storage.getTeacherByMobile(mobile);
+      
+      if (!teacher) {
+        return res.status(404).json({ message: "Teacher not found" });
+      }
+      
+      res.json(teacher);
+    } catch (error) {
+      console.error("Error fetching teacher:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Admin: Get teacher's exam records
+  app.get("/api/admin/teacher-exams/:mobile", async (req, res) => {
+    try {
+      const { mobile } = req.params;
+      const exams = await storage.getExamsByMobile(mobile);
+      res.json(exams);
+    } catch (error) {
+      console.error("Error fetching teacher exams:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Admin: Get teacher's feedback records
+  app.get("/api/admin/teacher-feedback/:mobile", async (req, res) => {
+    try {
+      const { mobile } = req.params;
+      const feedback = await storage.getTeacherFeedback(mobile);
+      res.json(feedback);
+    } catch (error) {
+      console.error("Error fetching teacher feedback:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Admin: Create batch
   app.post("/api/admin/batches", async (req, res) => {
     try {

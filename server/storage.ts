@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, gte, sql, desc, count } from "drizzle-orm";
+import { eq, and, gte, sql, desc, count, avg } from "drizzle-orm";
 import { cache, questionCache, assessmentCache, feedbackCache, getCacheKey } from "./cache";
 import {
   users, teachers, batches, batchTeachers, questions, feedbackQuestions,
@@ -77,6 +77,9 @@ export interface IStorage {
     averageRating: number;
     satisfactionRate: number;
   }>;
+
+  // Teacher feedback management
+  getTeacherFeedback(mobile: string): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -361,6 +364,29 @@ export class DatabaseStorage implements IStorage {
       averageRating: 4.2, // Placeholder - would need proper rating calculation
       satisfactionRate: 89.7, // Placeholder - would need proper satisfaction calculation
     };
+  }
+
+  async getTeacherFeedback(mobile: string): Promise<any[]> {
+    try {
+      const feedbackRecords = await db
+        .select({
+          id: trainerFeedback.id,
+          topicName: trainerFeedback.topicId,
+          feedbackQue: trainerFeedback.feedbackQue,
+          feedback: trainerFeedback.feedback,
+          batchName: trainerFeedback.batchName,
+          district: trainerFeedback.district,
+          createdAt: trainerFeedback.submittedAt,
+        })
+        .from(trainerFeedback)
+        .where(eq(trainerFeedback.mobile, mobile))
+        .orderBy(desc(trainerFeedback.submittedAt));
+
+      return feedbackRecords;
+    } catch (error) {
+      console.error("Error fetching teacher feedback:", error);
+      return [];
+    }
   }
 }
 
