@@ -418,11 +418,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Assessment Control: Get available dates
+  // Assessment Control: Get available dates with their assigned topics
   app.get("/api/admin/assessment-control/dates", async (req, res) => {
     try {
-      const dates = await storage.getAssessmentControlDates();
-      res.json(dates);
+      const datesWithTopics = await storage.getAssessmentControlDates();
+      res.json(datesWithTopics);
     } catch (error) {
       console.error("Error fetching assessment control dates:", error);
       res.status(500).json({ message: "Server error" });

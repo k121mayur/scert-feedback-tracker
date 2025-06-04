@@ -93,7 +93,7 @@ export interface IStorage {
   }>;
 
   // Assessment control
-  getAssessmentControlDates(): Promise<{ date: string; isActive: boolean; }[]>;
+  getAssessmentControlDates(): Promise<{ date: string; isActive: boolean; topics: { id: string; name: string; isActive: boolean; }[]; }[]>;
   getAssessmentControlTopics(): Promise<{ id: string; name: string; isActive: boolean; }[]>;
   updateAssessmentDateStatus(date: string, isActive: boolean): Promise<void>;
   updateTopicActiveStatus(topicId: string, isActive: boolean): Promise<void>;
@@ -456,16 +456,45 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getAssessmentControlDates(): Promise<{ date: string; isActive: boolean; }[]> {
-    const dates = await db.select({
+  async getAssessmentControlDates(): Promise<{ date: string; isActive: boolean; topics: { id: string; name: string; isActive: boolean; }[]; }[]> {
+    // Get all assessment schedules with their topics
+    const schedules = await db.select({
       date: assessmentSchedules.assessmentDate,
-      isActive: assessmentSchedules.isActive
+      isActive: assessmentSchedules.isActive,
+      topicId: assessmentSchedules.topicId,
+      topicName: assessmentSchedules.topicName
     })
     .from(assessmentSchedules)
-    .groupBy(assessmentSchedules.assessmentDate, assessmentSchedules.isActive)
-    .orderBy(assessmentSchedules.assessmentDate);
+    .orderBy(assessmentSchedules.assessmentDate, assessmentSchedules.topicId);
     
-    return dates;
+    // Group by date and collect topics for each date
+    const dateMap = new Map<string, { date: string; isActive: boolean; topics: { id: string; name: string; isActive: boolean; }[]; }>();
+    
+    schedules.forEach(schedule => {
+      const dateKey = schedule.date;
+      
+      if (!dateMap.has(dateKey)) {
+        dateMap.set(dateKey, {
+          date: schedule.date,
+          isActive: schedule.isActive,
+          topics: []
+        });
+      }
+      
+      const dateEntry = dateMap.get(dateKey)!;
+      
+      // Add topic if not already present
+      const topicExists = dateEntry.topics.some(t => t.id === schedule.topicId);
+      if (!topicExists) {
+        dateEntry.topics.push({
+          id: schedule.topicId,
+          name: schedule.topicName,
+          isActive: true // Default to active
+        });
+      }
+    });
+    
+    return Array.from(dateMap.values());
   }
 
   async getAssessmentControlTopics(): Promise<{ id: string; name: string; isActive: boolean; }[]> {

@@ -111,21 +111,11 @@ export default function Admin() {
     loadedRef.current = true;
     
     try {
-      const [datesResponse, topicsResponse] = await Promise.all([
-        fetch('/api/admin/assessment-control/dates'),
-        fetch('/api/admin/assessment-control/topics')
-      ]);
+      const datesResponse = await fetch('/api/admin/assessment-control/dates');
+      const datesWithTopics = await datesResponse.json();
       
-      const dates = await datesResponse.json();
-      const topics = await topicsResponse.json();
-      
-      // Group topics by dates (for simplicity, we'll show all topics for each date)
-      const mappings = dates.map((date: AssessmentDate) => ({
-        ...date,
-        topics: topics
-      }));
-      
-      setDateTopicMappings(mappings);
+      // Data now comes with topics already assigned to each date
+      setDateTopicMappings(datesWithTopics);
     } catch (error) {
       console.error("Error loading assessment data:", error);
       loadedRef.current = false;
