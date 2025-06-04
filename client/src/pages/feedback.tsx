@@ -245,17 +245,23 @@ export default function Feedback() {
                     <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
                       {[question.option1, question.option2, question.option3, question.option4, question.option5].map((option, optionIndex) => (
                         <div key={optionIndex} className="feedback-option">
-                          <RadioGroupItem
-                            value={option}
-                            id={`q${question.id}_option${optionIndex}`}
-                            className="sr-only"
-                          />
-                          <Label
-                            htmlFor={`q${question.id}_option${optionIndex}`}
-                            className="flex items-center justify-center p-3 border border-border rounded-lg hover:bg-muted cursor-pointer transition-colors text-sm font-medium min-h-[48px]"
-                          >
-                            {option}
-                          </Label>
+                          <div className="flex items-center">
+                            <RadioGroupItem
+                              value={option}
+                              id={`q${question.id}_option${optionIndex}`}
+                              className="mr-2"
+                            />
+                            <Label
+                              htmlFor={`q${question.id}_option${optionIndex}`}
+                              className={`flex-1 flex items-center justify-center p-3 border rounded-lg cursor-pointer transition-colors text-sm font-medium min-h-[48px] ${
+                                answers[question.id] === option 
+                                  ? 'border-primary bg-primary/10 text-primary' 
+                                  : 'border-border hover:bg-muted'
+                              }`}
+                            >
+                              {option}
+                            </Label>
+                          </div>
                         </div>
                       ))}
                     </div>
