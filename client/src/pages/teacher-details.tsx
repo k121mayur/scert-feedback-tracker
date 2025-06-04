@@ -49,6 +49,8 @@ interface TeacherStats {
   worstScore: number;
   totalTopics: number;
   passRate: number;
+  totalCorrect: number;
+  totalQuestions: number;
 }
 
 export default function TeacherDetails() {
@@ -137,6 +139,10 @@ export default function TeacherDetails() {
         const worstScore = Math.min(...scores);
         const totalTopics = new Set(examData.map((exam: ExamRecord) => exam.topicId)).size;
         const passRate = (scores.filter((score: number) => score >= 60).length / totalExams) * 100;
+        
+        // Calculate total marks (correct answers out of total questions)
+        const totalCorrect = examData.reduce((sum: number, exam: ExamRecord) => sum + exam.correctCount, 0);
+        const totalQuestions = examData.reduce((sum: number, exam: ExamRecord) => sum + exam.totalQuestions, 0);
 
         setTeacherStats({
           totalExams,
@@ -144,7 +150,9 @@ export default function TeacherDetails() {
           bestScore,
           worstScore,
           totalTopics,
-          passRate: Math.round(passRate)
+          passRate: Math.round(passRate),
+          totalCorrect,
+          totalQuestions
         });
       } else {
         setTeacherStats({
@@ -153,7 +161,9 @@ export default function TeacherDetails() {
           bestScore: 0,
           worstScore: 0,
           totalTopics: 0,
-          passRate: 0
+          passRate: 0,
+          totalCorrect: 0,
+          totalQuestions: 0
         });
       }
 
@@ -313,7 +323,7 @@ export default function TeacherDetails() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
                         <div className="text-center p-4 bg-blue-50 rounded-lg">
                           <div className="text-2xl font-bold text-blue-600">{teacherStats.totalExams}</div>
                           <div className="text-sm text-blue-600">Total Exams</div>
@@ -337,6 +347,10 @@ export default function TeacherDetails() {
                         <div className="text-center p-4 bg-emerald-50 rounded-lg">
                           <div className="text-2xl font-bold text-emerald-600">{teacherStats.passRate}%</div>
                           <div className="text-sm text-emerald-600">Pass Rate</div>
+                        </div>
+                        <div className="text-center p-4 bg-rose-50 rounded-lg">
+                          <div className="text-2xl font-bold text-rose-600">{teacherStats.totalCorrect}/{teacherStats.totalQuestions}</div>
+                          <div className="text-sm text-rose-600">Total Marks</div>
                         </div>
                       </div>
                     </CardContent>
