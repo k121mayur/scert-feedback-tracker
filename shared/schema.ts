@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, varchar, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar, date, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -19,6 +19,12 @@ export const teachers = pgTable("teachers", {
   payId: text("pay_id"),
   district: text("district"),
   createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    mobileIdx: index("idx_teachers_mobile").on(table.mobile),
+    teacherIdIdx: index("idx_teachers_teacher_id").on(table.teacherId),
+    districtIdx: index("idx_teachers_district").on(table.district),
+  };
 });
 
 // Batches table
@@ -40,6 +46,13 @@ export const assessmentSchedules = pgTable("assessment_schedules", {
   topicName: text("topic_name").notNull(),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    dateIdx: index("idx_assessment_date").on(table.assessmentDate),
+    topicIdIdx: index("idx_assessment_topic_id").on(table.topicId),
+    activeIdx: index("idx_assessment_active").on(table.isActive),
+    dateTopicIdx: index("idx_assessment_date_topic").on(table.assessmentDate, table.topicId),
+  };
 });
 
 // Batch teachers relation table
@@ -67,6 +80,11 @@ export const questions = pgTable("questions", {
   optionD: text("option_d").notNull(),
   correctAnswer: varchar("correct_answer", { length: 1 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    topicIdIdx: index("idx_questions_topic_id").on(table.topicId),
+    createdAtIdx: index("idx_questions_created_at").on(table.createdAt),
+  };
 });
 
 // Feedback questions table
@@ -96,6 +114,14 @@ export const examResults = pgTable("exam_results", {
   unansweredCount: integer("unanswered_count").notNull().default(0),
   totalQuestions: integer("total_questions").notNull().default(5),
   submittedAt: timestamp("submitted_at").defaultNow(),
+}, (table) => {
+  return {
+    mobileIdx: index("idx_exam_results_mobile").on(table.mobile),
+    topicIdIdx: index("idx_exam_results_topic_id").on(table.topicId),
+    assessmentDateIdx: index("idx_exam_results_assessment_date").on(table.assessmentDate),
+    mobileTopicDateIdx: index("idx_exam_results_mobile_topic_date").on(table.mobile, table.topicId, table.assessmentDate),
+    submittedAtIdx: index("idx_exam_results_submitted_at").on(table.submittedAt),
+  };
 });
 
 // Exam answers table
