@@ -9,6 +9,10 @@ const redis = new Redis({
   port: parseInt(process.env.REDIS_PORT || '6379'),
   password: process.env.REDIS_PASSWORD,
   lazyConnect: true,
+  retryDelayOnFailover: 100,
+  enableOfflineQueue: false,
+  connectTimeout: 1000,
+  maxRetriesPerRequest: 1,
 });
 
 // Create exam processing queue with Redis backend
