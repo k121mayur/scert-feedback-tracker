@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar, date } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -29,6 +29,16 @@ export const batches = pgTable("batches", {
   coordinatorName: text("coordinator_name").notNull(),
   serviceType: text("service_type").notNull(),
   trainingGroup: text("training_group").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Assessment schedules table
+export const assessmentSchedules = pgTable("assessment_schedules", {
+  id: serial("id").primaryKey(),
+  assessmentDate: date("assessment_date").notNull(),
+  topicId: text("topic_id").notNull(),
+  topicName: text("topic_name").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -76,13 +86,15 @@ export const examResults = pgTable("exam_results", {
   id: serial("id").primaryKey(),
   mobile: varchar("mobile", { length: 10 }).notNull(),
   topicId: text("topic_id").notNull(),
+  topicName: text("topic_name").notNull(),
+  assessmentDate: date("assessment_date").notNull(),
   batchName: text("batch_name").notNull(),
   district: text("district").notNull(),
   registerId: text("register_id"),
   correctCount: integer("correct_count").notNull().default(0),
   wrongCount: integer("wrong_count").notNull().default(0),
   unansweredCount: integer("unanswered_count").notNull().default(0),
-  totalQuestions: integer("total_questions").notNull().default(10),
+  totalQuestions: integer("total_questions").notNull().default(5),
   submittedAt: timestamp("submitted_at").defaultNow(),
 });
 
@@ -189,6 +201,8 @@ export const insertFeedbackQuestionSchema = createInsertSchema(feedbackQuestions
 export const insertExamResultSchema = createInsertSchema(examResults).omit({
   id: true,
   submittedAt: true,
+}).extend({
+  assessmentDate: z.string(),
 });
 
 export const insertExamAnswerSchema = createInsertSchema(examAnswers).omit({
@@ -206,6 +220,11 @@ export const insertTrainerFeedbackSchema = createInsertSchema(trainerFeedback).o
 export const insertTopicFeedbackSchema = createInsertSchema(topicFeedback).omit({
   id: true,
   submittedAt: true,
+});
+
+export const insertAssessmentScheduleSchema = createInsertSchema(assessmentSchedules).omit({
+  id: true,
+  createdAt: true,
 });
 
 // Types
@@ -238,3 +257,6 @@ export type InsertTrainerFeedback = z.infer<typeof insertTrainerFeedbackSchema>;
 
 export type TopicFeedback = typeof topicFeedback.$inferSelect;
 export type InsertTopicFeedback = z.infer<typeof insertTopicFeedbackSchema>;
+
+export type AssessmentSchedule = typeof assessmentSchedules.$inferSelect;
+export type InsertAssessmentSchedule = z.infer<typeof insertAssessmentScheduleSchema>;
