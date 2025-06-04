@@ -53,21 +53,20 @@ export function QuestionCard({
             <div className="space-y-3">
               {options.map((option) => (
                 <div key={option.value} className="exam-option">
-                  <RadioGroupItem
-                    value={option.value}
-                    id={`q${questionNumber}_${option.value}`}
-                    className="sr-only"
-                  />
-                  <Label
-                    htmlFor={`q${questionNumber}_${option.value}`}
-                    className="exam-option-content flex items-start cursor-pointer w-full"
-                  >
-                    <div className="exam-option-indicator"></div>
-                    <div className="flex-1">
+                  <div className="flex items-start">
+                    <RadioGroupItem
+                      value={option.value}
+                      id={`q${questionNumber}_${option.value}`}
+                      className="mt-1 mr-3"
+                    />
+                    <Label
+                      htmlFor={`q${questionNumber}_${option.value}`}
+                      className="flex-1 cursor-pointer"
+                    >
                       <span className="font-medium text-primary mr-2">{option.value}.</span>
                       <span className="text-foreground">{option.text}</span>
-                    </div>
-                  </Label>
+                    </Label>
+                  </div>
                 </div>
               ))}
             </div>

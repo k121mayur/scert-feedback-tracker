@@ -80,21 +80,32 @@
     @apply flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors;
   }
 
-  .exam-option input[type="radio"] {
-    @apply sr-only;
+  .exam-option-content {
+    @apply flex items-start cursor-pointer w-full;
   }
 
   .exam-option-indicator {
-    @apply w-5 h-5 border-2 border-gray-300 rounded-full mr-3 flex items-center justify-center transition-colors;
+    @apply w-5 h-5 border-2 border-gray-300 rounded-full mr-3 flex items-center justify-center transition-colors relative;
   }
 
-  .exam-option input[type="radio"]:checked + .exam-option-content .exam-option-indicator {
+  /* When radio is checked, update the indicator */
+  .exam-option:has(input[type="radio"]:checked) .exam-option-indicator {
     @apply border-primary;
   }
 
-  .exam-option input[type="radio"]:checked + .exam-option-content .exam-option-indicator::after {
+  .exam-option:has(input[type="radio"]:checked) .exam-option-indicator::after {
     content: '';
-    @apply w-3 h-3 bg-primary rounded-full;
+    @apply w-3 h-3 bg-primary rounded-full absolute;
+  }
+
+  /* Fallback for browsers that don't support :has() */
+  [data-state="checked"] .exam-option-indicator {
+    @apply border-primary;
+  }
+
+  [data-state="checked"] .exam-option-indicator::after {
+    content: '';
+    @apply w-3 h-3 bg-primary rounded-full absolute;
   }
 
   .feedback-option {
