@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db } from "./autoscale-db";
 import { eq, and, gte, sql, desc, count, avg } from "drizzle-orm";
 import { cache, questionCache, assessmentCache, feedbackCache, getCacheKey } from "./cache";
 import {
@@ -158,6 +158,7 @@ export class DatabaseStorage implements IStorage {
     if (cached) return cached;
 
     try {
+      // Use optimized database connection for autoscale
       const result = await db.select({ date: assessmentSchedules.assessmentDate })
         .from(assessmentSchedules)
         .where(eq(assessmentSchedules.isActive, true))

@@ -4,16 +4,22 @@ import { storage } from './storage';
 import { sessionCache } from './cache';
 
 // Redis configuration for scalable queue system
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD,
-  lazyConnect: true,
-  retryDelayOnFailover: 100,
-  enableOfflineQueue: false,
-  connectTimeout: 1000,
-  maxRetriesPerRequest: 1,
-});
+let redis: Redis | null = null;
+
+try {
+  redis = new Redis({
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    password: process.env.REDIS_PASSWORD,
+    lazyConnect: true,
+    enableOfflineQueue: false,
+    connectTimeout: 1000,
+    maxRetriesPerRequest: 1,
+  });
+} catch (error) {
+  console.log('Redis not available, using memory fallback');
+  redis = null;
+}
 
 // Create exam processing queue with Redis backend
 export const examQueue = new Bull('exam-processing', {
