@@ -16,17 +16,17 @@ if (!process.env.DATABASE_URL) {
 // Optimized connection pool for high-load (40k concurrent users)
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 2000, // Significantly increased for 40K concurrent users
-  min: 500,  // Higher minimum to handle burst traffic
-  idleTimeoutMillis: 10000, // Shorter idle timeout for faster connection recycling
-  connectionTimeoutMillis: 2000, // Faster timeout for better error handling
-  allowExitOnIdle: false,
-  maxUses: 10000, // Increased connection lifecycle
+  max: 100, // Reduced to prevent overwhelming Neon
+  min: 20,  // Reasonable minimum for startup
+  idleTimeoutMillis: 30000, // Longer idle timeout for stability
+  connectionTimeoutMillis: 10000, // Increased timeout for reliability
+  allowExitOnIdle: true,
+  maxUses: 7500, // Connection lifecycle
   keepAlive: true,
-  // Additional optimization for high-load scenarios
-  statement_timeout: 5000, // 5 second query timeout
-  query_timeout: 5000,
-  application_name: 'teacher_assessment_app',
+  // Query timeout optimizations
+  statement_timeout: 15000, // 15 second query timeout
+  query_timeout: 15000, // Match statement timeout
+  application_name: 'teacher_assessment_scalable',
 });
 
 export const db = drizzle({ client: pool, schema });

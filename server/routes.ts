@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { examQueue } from "./queue";
+import { hybridQueue } from "./queue-fallback";
 import { z } from "zod";
 import multer from "multer";
 import { parse } from "csv-parse";
@@ -191,8 +191,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Exam already submitted for this date" });
       }
 
-      // ASYNC PROCESSING: Add to queue for scalability
-      const examId = examQueue.enqueue(data);
+      // ASYNC PROCESSING: Add to scalable queue system
+      const examId = await hybridQueue.addExam(data);
 
       // Return immediately with processing ID
       res.json({
@@ -200,7 +200,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         processing: true,
         examId: examId,
         message: "Exam submitted for processing. Check status using the exam ID.",
-        statusEndpoint: `/api/exam-status/${examId}`
+        statusEndpoint: `/api/exam-status/${examId}`,
+        queueType: hybridQueue.isUsingRedis() ? 'redis' : 'memory'
       });
     } catch (error) {
       console.error("Error submitting exam:", error);
