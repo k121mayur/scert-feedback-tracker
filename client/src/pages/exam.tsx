@@ -19,9 +19,13 @@ interface Question {
 
 interface ExamData {
   mobile: string;
-  topic: string;
-  batch: string;
-  district: string;
+  topic?: string;
+  batch?: string;
+  district?: string;
+  // New date-based assessment fields
+  date?: string;
+  topicId?: string;
+  topicName?: string;
 }
 
 export default function Exam() {
@@ -38,7 +42,23 @@ export default function Exam() {
   const { timeLeft, isExpired, startTimer } = useTimer(600); // 10 minutes
 
   useEffect(() => {
-    // Parse URL parameters
+    // First try to get exam data from sessionStorage (new date-based system)
+    const sessionExamData = sessionStorage.getItem('examData');
+    
+    if (sessionExamData) {
+      const parsedData = JSON.parse(sessionExamData);
+      setExamData(parsedData);
+      
+      // Use new API endpoint for date-based assessments
+      if (parsedData.topicId) {
+        loadNewExamQuestions(parsedData.topicId);
+      } else {
+        loadQuestions(parsedData.mobile, parsedData.topic);
+      }
+      return;
+    }
+
+    // Fallback to URL parameters (legacy system)
     const urlParams = new URLSearchParams(window.location.search);
     const mobile = urlParams.get('mobile');
     const topic = urlParams.get('topic');
@@ -97,6 +117,38 @@ export default function Exam() {
     }
   };
 
+  const loadNewExamQuestions = async (topicId: string) => {
+    try {
+      const response = await fetch(`/api/exam-questions/${topicId}`);
+      const data = await response.json();
+
+      if (data.status === "error") {
+        toast({
+          title: "Error",
+          description: data.message,
+          variant: "destructive",
+        });
+        setLocation('/');
+        return;
+      }
+
+      setQuestions(data.questions);
+      setAnswers(new Array(data.questions.length).fill(null));
+      setExamStarted(true);
+      startTimer();
+    } catch (error) {
+      console.error("Error loading questions:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load questions. Please try again.",
+        variant: "destructive",
+      });
+      setLocation('/');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAnswerSelect = (answer: string) => {
     const newAnswers = [...answers];
     newAnswers[currentQuestion] = answer;
@@ -126,10 +178,12 @@ export default function Exam() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          topic_id: examData?.topic,
+          topic_id: examData?.topicId || examData?.topic,
+          topic_name: examData?.topicName || examData?.topic,
           mobile: examData?.mobile,
-          batch_name: examData?.batch,
-          district: examData?.district,
+          assessment_date: examData?.date || new Date().toISOString().split('T')[0],
+          batch_name: examData?.batch || "General",
+          district: examData?.district || "General",
           questions: questions.map(q => q.question),
           answers: answers,
         }),
