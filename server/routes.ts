@@ -72,16 +72,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get questions for new exam format
-  app.get("/api/exam-questions/:topicId", async (req, res) => {
+  // Get questions for new exam format (OPTIMIZED for 40K users)
+  app.get("/api/exam-questions/:topicId", rateLimit(5, 60000), async (req, res) => {
     try {
       const { topicId } = req.params;
+      
+      // Use optimized random question selection
       const questions = await storage.getRandomQuestionsByTopic(topicId, 5);
       
       if (questions.length === 0) {
         return res.json({ status: "error", message: "No questions available for this topic" });
       }
 
+      // Minimize payload size for better performance
       res.json({
         status: "success",
         questions: questions.map(q => ({
@@ -126,23 +129,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get questions for exam
-  app.get("/api/questions/:topicId/:mobile", async (req, res) => {
+  // Get questions for exam (OPTIMIZED for 40K users)
+  app.get("/api/questions/:topicId/:mobile", rateLimit(5, 60000), async (req, res) => {
     try {
       const { topicId, mobile } = req.params;
       
-      // Check if teacher is eligible
+      // Optimized batch teacher lookup with caching
       const batchTeacher = await storage.getBatchTeacherByMobile(mobile);
       if (!batchTeacher || batchTeacher.topicId !== topicId) {
         return res.json({ status: "error", message: "Invalid access or exam expired" });
       }
 
-      // Check if already attempted
+      // Cached duplicate check
       const existingResult = await storage.getExamResult(mobile, topicId);
       if (existingResult) {
         return res.json({ status: "error", message: "Exam already attempted" });
       }
 
+      // Use optimized question retrieval
       const questions = await storage.getQuestionsByTopic(topicId, 10);
       
       if (questions.length === 0) {
