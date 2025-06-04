@@ -83,7 +83,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         batch_name: z.string(),
         district: z.string(),
         questions: z.array(z.string()),
-        answers: z.array(z.string().optional())
+        answers: z.array(z.string().nullable())
       });
 
       const data = examSchema.parse(req.body);

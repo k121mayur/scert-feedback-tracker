@@ -194,6 +194,8 @@ export const insertExamResultSchema = createInsertSchema(examResults).omit({
 export const insertExamAnswerSchema = createInsertSchema(examAnswers).omit({
   id: true,
   submittedAt: true,
+}).extend({
+  selectedAnswer: z.string().nullable(),
 });
 
 export const insertTrainerFeedbackSchema = createInsertSchema(trainerFeedback).omit({
