@@ -142,17 +142,38 @@ export default function Feedback() {
         }),
       });
 
-      const result = await response.text();
-
-      if (result === "success") {
-        // Show thank you message
-        showThankYouMessage();
+      if (response.ok) {
+        const result = await response.text();
+        if (result === "success") {
+          // Show thank you message
+          showThankYouMessage();
+        } else {
+          toast({
+            title: "Submission Failed",
+            description: "An error occurred while submitting feedback.",
+            variant: "destructive",
+          });
+        }
       } else {
-        toast({
-          title: "Submission Failed",
-          description: result || "Failed to submit feedback.",
-          variant: "destructive",
-        });
+        // Handle HTTP error responses
+        const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
+        if (response.status === 400 && errorData.message === "Feedback already submitted") {
+          toast({
+            title: "Already Submitted",
+            description: "You have already submitted feedback for this topic.",
+            variant: "destructive",
+          });
+          // Redirect to home since feedback is already done
+          setTimeout(() => {
+            setLocation('/');
+          }, 2000);
+        } else {
+          toast({
+            title: "Submission Failed",
+            description: errorData.message || "Failed to submit feedback.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
       console.error("Error submitting feedback:", error);
