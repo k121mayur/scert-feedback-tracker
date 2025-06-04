@@ -30,3 +30,23 @@ export const pool = new Pool({
 });
 
 export const db = drizzle({ client: pool, schema });
+
+// Add pool error handling for 40K user scalability
+pool.on('error', (err) => {
+  console.error('Database pool error:', err);
+});
+
+pool.on('connect', () => {
+  console.log('Database pool connected');
+});
+
+// Health check function for circuit breaker
+export async function checkDatabaseHealth(): Promise<boolean> {
+  try {
+    await pool.query('SELECT 1');
+    return true;
+  } catch (error) {
+    console.error('Database health check failed:', error);
+    return false;
+  }
+}

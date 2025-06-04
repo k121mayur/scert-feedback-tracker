@@ -1,13 +1,23 @@
 import { EventEmitter } from 'events';
 import { storage } from './storage';
 import { sessionCache } from './cache';
+import { checkDatabaseHealth } from './db';
 
 // Simple in-memory queue for async processing
 class ExamQueue extends EventEmitter {
-  private queue: Array<{ id: string; data: any; timestamp: number }> = [];
+  private queue: Array<{ id: string; data: any; timestamp: number; retryCount: number }> = [];
   private processing = false;
   private workers = 0;
   private maxWorkers = 10; // Configurable based on server capacity
+  private maxRetries = 3;
+  private retryDelay = 5000; // 5 seconds
+  private circuitBreaker = {
+    failures: 0,
+    lastFailure: 0,
+    threshold: 10, // Trip after 10 failures
+    timeout: 30000, // 30 seconds
+    state: 'CLOSED' as 'CLOSED' | 'OPEN' | 'HALF_OPEN'
+  };
 
   constructor() {
     super();
@@ -20,7 +30,8 @@ class ExamQueue extends EventEmitter {
     const queueItem = {
       id,
       data: examData,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      retryCount: 0
     };
 
     this.queue.push(queueItem);
@@ -41,9 +52,44 @@ class ExamQueue extends EventEmitter {
     }, 100); // Check every 100ms for new items
   }
 
-  // Process next item in queue
+  // Check circuit breaker state
+  private canProcess(): boolean {
+    const now = Date.now();
+    
+    if (this.circuitBreaker.state === 'OPEN') {
+      if (now - this.circuitBreaker.lastFailure > this.circuitBreaker.timeout) {
+        this.circuitBreaker.state = 'HALF_OPEN';
+        console.log('Circuit breaker transitioning to HALF_OPEN');
+        return true;
+      }
+      return false;
+    }
+    
+    return true;
+  }
+
+  // Record processing result for circuit breaker
+  private recordResult(success: boolean) {
+    if (success) {
+      this.circuitBreaker.failures = 0;
+      if (this.circuitBreaker.state === 'HALF_OPEN') {
+        this.circuitBreaker.state = 'CLOSED';
+        console.log('Circuit breaker CLOSED - system recovered');
+      }
+    } else {
+      this.circuitBreaker.failures++;
+      this.circuitBreaker.lastFailure = Date.now();
+      
+      if (this.circuitBreaker.failures >= this.circuitBreaker.threshold) {
+        this.circuitBreaker.state = 'OPEN';
+        console.log(`Circuit breaker OPEN - too many failures (${this.circuitBreaker.failures})`);
+      }
+    }
+  }
+
+  // Process next item in queue with retry and circuit breaker
   private async processNext() {
-    if (this.workers >= this.maxWorkers || this.queue.length === 0) {
+    if (this.workers >= this.maxWorkers || this.queue.length === 0 || !this.canProcess()) {
       return;
     }
 
@@ -54,14 +100,40 @@ class ExamQueue extends EventEmitter {
     
     try {
       await this.processExamSubmission(item);
+      this.recordResult(true);
     } catch (error) {
-      console.error(`Failed to process exam ${item.id}:`, error);
-      // Update status to failed
-      sessionCache.set(`exam_status_${item.id}`, { 
-        status: 'failed', 
-        error: error instanceof Error ? error.message : 'Unknown error',
-        processedAt: new Date().toISOString()
-      }, 3600);
+      console.error(`Failed to process exam ${item.id} (attempt ${item.retryCount + 1}):`, error);
+      this.recordResult(false);
+      
+      // Retry logic
+      if (item.retryCount < this.maxRetries && this.circuitBreaker.state !== 'OPEN') {
+        item.retryCount++;
+        
+        // Exponential backoff
+        const delay = this.retryDelay * Math.pow(2, item.retryCount - 1);
+        
+        setTimeout(() => {
+          this.queue.unshift(item); // Add back to front of queue
+          console.log(`Retrying exam ${item.id} in ${delay}ms (attempt ${item.retryCount})`);
+        }, delay);
+        
+        // Update status to retrying
+        sessionCache.set(`exam_status_${item.id}`, { 
+          status: 'retrying',
+          retryCount: item.retryCount,
+          nextRetryAt: new Date(Date.now() + delay).toISOString(),
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, 3600);
+      } else {
+        // Max retries exceeded or circuit breaker open
+        sessionCache.set(`exam_status_${item.id}`, { 
+          status: 'failed', 
+          error: error instanceof Error ? error.message : 'Unknown error',
+          retryCount: item.retryCount,
+          circuitBreakerState: this.circuitBreaker.state,
+          processedAt: new Date().toISOString()
+        }, 3600);
+      }
     } finally {
       this.workers--;
     }
