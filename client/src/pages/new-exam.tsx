@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Clock, BookOpen, User, ArrowRight } from "lucide-react";
+import { Calendar, Clock, BookOpen, User, ArrowRight, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface AssessmentSchedule {
@@ -159,13 +159,27 @@ export default function NewExam() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <Card className="material-shadow-2">
           <CardHeader className="bg-primary text-primary-foreground rounded-t-lg">
-            <CardTitle className="text-2xl font-medium flex items-center">
-              <BookOpen className="mr-2" />
-              Assessment Portal
-            </CardTitle>
-            <p className="text-primary-foreground/80 mt-1">
-              Select your assessment date and topic to begin
-            </p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLocation('/')}
+                  className="text-primary-foreground hover:bg-primary-foreground/10 mr-3 p-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div>
+                  <CardTitle className="text-2xl font-medium flex items-center">
+                    <BookOpen className="mr-2" />
+                    Assessment Portal
+                  </CardTitle>
+                  <p className="text-primary-foreground/80 mt-1">
+                    Select your assessment date and topic to begin
+                  </p>
+                </div>
+              </div>
+            </div>
           </CardHeader>
 
           <CardContent className="p-8">
