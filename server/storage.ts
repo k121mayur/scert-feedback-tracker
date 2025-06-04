@@ -230,15 +230,49 @@ export class DatabaseStorage implements IStorage {
       return cached;
     }
     
+    // OPTIMIZED: Use efficient random sampling instead of ORDER BY RANDOM()
+    // First get the total count and available IDs
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(questions)
+      .where(eq(questions.topicId, topicId));
+    
+    const totalQuestions = countResult?.count || 0;
+    if (totalQuestions === 0) {
+      return [];
+    }
+    
+    // Generate random IDs for sampling
+    const selectedIds = new Set<number>();
+    const maxAttempts = Math.min(totalQuestions, count * 3); // Prevent infinite loops
+    let attempts = 0;
+    
+    while (selectedIds.size < Math.min(count, totalQuestions) && attempts < maxAttempts) {
+      const randomOffset = Math.floor(Math.random() * totalQuestions);
+      const [randomQuestion] = await db
+        .select({ id: questions.id })
+        .from(questions)
+        .where(eq(questions.topicId, topicId))
+        .limit(1)
+        .offset(randomOffset);
+      
+      if (randomQuestion) {
+        selectedIds.add(randomQuestion.id);
+      }
+      attempts++;
+    }
+    
+    // Fetch the selected questions
     const result = await db
       .select()
       .from(questions)
-      .where(eq(questions.topicId, topicId))
-      .orderBy(sql`RANDOM()`)
-      .limit(count);
+      .where(and(
+        eq(questions.topicId, topicId),
+        sql`${questions.id} IN (${Array.from(selectedIds).join(',')})`
+      ));
     
     // Cache for shorter time since it's random
-    questionCache.set(cacheKey, result, 180); // 3 minutes
+    questionCache.set(cacheKey, result, 300); // 5 minutes
     return result;
   }
 

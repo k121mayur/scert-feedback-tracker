@@ -67,6 +67,15 @@ export const batchTeachers = pgTable("batch_teachers", {
   registerId: text("register_id"),
   stopTime: timestamp("stop_time").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    // Critical indexes for high-load mobile lookups
+    mobileIdx: index("idx_batch_teachers_mobile").on(table.teacherMobile),
+    mobileTopicIdx: index("idx_batch_teachers_mobile_topic").on(table.teacherMobile, table.topicId),
+    batchNameIdx: index("idx_batch_teachers_batch_name").on(table.batchName),
+    districtIdx: index("idx_batch_teachers_district").on(table.district),
+    teacherIdIdx: index("idx_batch_teachers_teacher_id").on(table.teacherId),
+  };
 });
 
 // Questions table
@@ -134,6 +143,14 @@ export const examAnswers = pgTable("exam_answers", {
   correctAnswer: varchar("correct_answer", { length: 1 }).notNull(),
   isCorrect: boolean("is_correct").notNull().default(false),
   submittedAt: timestamp("submitted_at").defaultNow(),
+}, (table) => {
+  return {
+    // Critical indexes for 40K concurrent users
+    mobileTopicIdx: index("idx_exam_answers_mobile_topic").on(table.mobile, table.topicId),
+    mobileIdx: index("idx_exam_answers_mobile").on(table.mobile),
+    topicIdIdx: index("idx_exam_answers_topic_id").on(table.topicId),
+    submittedAtIdx: index("idx_exam_answers_submitted_at").on(table.submittedAt),
+  };
 });
 
 // Trainer feedback table
@@ -146,6 +163,13 @@ export const trainerFeedback = pgTable("trainer_feedback", {
   batchName: text("batch_name").notNull(),
   district: text("district").notNull(),
   submittedAt: timestamp("submitted_at").defaultNow(),
+}, (table) => {
+  return {
+    // Indexes for feedback analytics and retrieval
+    mobileIdx: index("idx_trainer_feedback_mobile").on(table.mobile),
+    topicIdIdx: index("idx_trainer_feedback_topic_id").on(table.topicId),
+    submittedAtIdx: index("idx_trainer_feedback_submitted_at").on(table.submittedAt),
+  };
 });
 
 // Topic feedback table (for duplicate checking)
