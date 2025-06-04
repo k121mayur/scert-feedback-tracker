@@ -10,6 +10,8 @@ import Results from "@/pages/results";
 import Feedback from "@/pages/feedback";
 import Admin from "@/pages/admin";
 import TeacherDetails from "@/pages/teacher-details";
+import AddTeacher from "@/pages/add-teacher";
+import EditTeacher from "@/pages/edit-teacher";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -22,6 +24,8 @@ function Router() {
       <Route path="/feedback" component={Feedback} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/teacher-details" component={TeacherDetails} />
+      <Route path="/admin/add-teacher" component={AddTeacher} />
+      <Route path="/admin/edit-teacher" component={EditTeacher} />
       <Route component={NotFound} />
     </Switch>
   );

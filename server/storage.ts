@@ -27,6 +27,7 @@ export interface IStorage {
   getTeacher(id: number): Promise<Teacher | undefined>;
   getTeacherByMobile(mobile: string): Promise<Teacher | undefined>;
   createTeacher(teacher: InsertTeacher): Promise<Teacher>;
+  updateTeacher(id: number, updates: Partial<InsertTeacher>): Promise<Teacher | undefined>;
   checkPaymentId(payId: string): Promise<boolean>;
 
   // Assessment schedule management
@@ -121,6 +122,15 @@ export class DatabaseStorage implements IStorage {
   async createTeacher(teacher: InsertTeacher): Promise<Teacher> {
     const [newTeacher] = await db.insert(teachers).values(teacher).returning();
     return newTeacher;
+  }
+
+  async updateTeacher(id: number, updates: Partial<InsertTeacher>): Promise<Teacher | undefined> {
+    const [updatedTeacher] = await db
+      .update(teachers)
+      .set(updates)
+      .where(eq(teachers.id, id))
+      .returning();
+    return updatedTeacher || undefined;
   }
 
   async checkPaymentId(payId: string): Promise<boolean> {

@@ -358,6 +358,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Create new teacher
+  app.post("/api/admin/teachers", async (req, res) => {
+    try {
+      const teacherSchema = z.object({
+        teacherId: z.string(),
+        teacherName: z.string(),
+        mobile: z.string().length(10),
+        payId: z.string(),
+        district: z.string()
+      });
+
+      const validatedData = teacherSchema.parse(req.body);
+      
+      // Check if teacher with this mobile already exists
+      const existingTeacher = await storage.getTeacherByMobile(validatedData.mobile);
+      if (existingTeacher) {
+        return res.status(409).json({ message: "Teacher with this mobile number already exists" });
+      }
+
+      const teacher = await storage.createTeacher(validatedData);
+      res.json(teacher);
+    } catch (error) {
+      console.error("Error creating teacher:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Server error" });
+      }
+    }
+  });
+
+  // Admin: Update teacher
+  app.put("/api/admin/teachers/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const teacherSchema = z.object({
+        teacherName: z.string(),
+        mobile: z.string().length(10),
+        payId: z.string().optional(),
+        district: z.string()
+      });
+
+      const validatedData = teacherSchema.parse(req.body);
+      const teacher = await storage.updateTeacher(parseInt(id), validatedData);
+      
+      if (!teacher) {
+        return res.status(404).json({ message: "Teacher not found" });
+      }
+
+      res.json(teacher);
+    } catch (error) {
+      console.error("Error updating teacher:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Server error" });
+      }
+    }
+  });
+
   // Admin: Get batch teachers
   app.get("/api/admin/batches/:batchName/teachers", async (req, res) => {
     try {
