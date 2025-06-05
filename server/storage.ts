@@ -626,20 +626,21 @@ export class DatabaseStorage implements IStorage {
         // Get topic associations for this date
         const dateTopics = await db.select({
           topicId: assessmentSchedules.topicId,
-          topicName: assessmentSchedules.topicName,
           isActive: assessmentSchedules.isActive
         }).from(assessmentSchedules)
         .where(eq(assessmentSchedules.assessmentDate, dateStr));
 
-        // Create a map of existing topic associations
+        // Create a map of existing topic associations with names from questions table
         const topicMap = new Map();
-        dateTopics.forEach(topic => {
+        for (const topic of dateTopics) {
+          // Get topic name from questions table
+          const topicInfo = allTopics.find(t => t.topicId === topic.topicId);
           topicMap.set(topic.topicId, {
             id: topic.topicId,
-            name: `${topic.topicId}: ${topic.topicName}`,
+            name: topicInfo?.topicName ? `${topic.topicId}: ${topicInfo.topicName}` : topic.topicId,
             isActive: topic.isActive
           });
-        });
+        }
 
         // Include all available topics, marking those not associated as inactive
         const topics = allTopics.map(topic => {
