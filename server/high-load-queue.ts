@@ -230,7 +230,8 @@ export class HighLoadQueueManager {
     const examQueues = ['exam_queue:high', 'exam_queue:normal', 'exam_queue:low'];
     const feedbackQueues = ['feedback_queue:high', 'feedback_queue:normal', 'feedback_queue:low'];
     
-    for (const queueKey of queues) {
+    // Process exam queues first (higher priority)
+    for (const queueKey of examQueues) {
       const items = await redisClient.rpop(queueKey, this.batchSize);
       if (!items || items.length === 0) continue;
 
@@ -246,6 +247,27 @@ export class HighLoadQueueManager {
 
       await Promise.allSettled(promises);
       break; // Process one queue at a time, prioritizing high -> normal -> low
+    }
+
+    // Process feedback queues if capacity allows
+    if (this.processingItems.size < this.maxConcurrentProcessing) {
+      for (const queueKey of feedbackQueues) {
+        const items = await redisClient.rpop(queueKey, this.batchSize);
+        if (!items || items.length === 0) continue;
+
+        const promises = items.map(async (item) => {
+          try {
+            const feedbackData = JSON.parse(item);
+            return await this.processFeedbackImmediately(feedbackData);
+          } catch (error) {
+            console.error('Error processing queued feedback:', error);
+            this.metrics.failed++;
+          }
+        });
+
+        await Promise.allSettled(promises);
+        break;
+      }
     }
   }
 

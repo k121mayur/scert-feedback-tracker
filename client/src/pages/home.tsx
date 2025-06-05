@@ -15,7 +15,7 @@ export default function Home() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <GraduationCap className="h-8 w-8 text-primary mr-3" />
-              <h1 className="text-xl font-medium text-foreground">Teacher Training Portal</h1>
+              <h1 className="text-xl font-medium text-foreground">NIPUN Teachers Portal</h1>
             </div>
             <nav className="hidden md:flex space-x-8">
               <Link href="#about-us" className="text-muted-foreground hover:text-primary transition-colors">
@@ -98,7 +98,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
-              <h3 className="text-lg font-semibold mb-4">Teacher Training Portal</h3>
+              <h3 className="text-lg font-semibold mb-4">NIPUN Teachers Portal</h3>
               <p className="text-gray-300 text-sm">
                 Comprehensive assessment platform designed for efficient teacher training and evaluation.
               </p>
@@ -124,7 +124,7 @@ export default function Home() {
           </div>
           <div className="border-t border-gray-700 mt-8 pt-8 text-center">
             <p className="text-gray-400 text-sm">
-              &copy; 2025 Teacher Training Portal. Built with modern web technologies for optimal performance.
+              &copy; 2025 NIPUN Teachers Portal. Built with modern web technologies for optimal performance.
             </p>
           </div>
         </div>
