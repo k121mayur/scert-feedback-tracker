@@ -805,6 +805,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Data reconciliation endpoints
+  app.get("/api/admin/data-reconciliation", async (req: Request, res: Response) => {
+    try {
+      const report = await dataReconciliation.performFullReconciliation();
+      res.json(report);
+    } catch (error) {
+      console.error("Error performing data reconciliation:", error);
+      res.status(500).json({ error: "Failed to perform data reconciliation" });
+    }
+  });
+
+  app.get("/api/admin/data-reconciliation/status", async (req: Request, res: Response) => {
+    try {
+      const lastReport = await dataReconciliation.getLastReconciliationReport();
+      res.json({ 
+        hasReport: !!lastReport,
+        lastRun: lastReport?.timestamp || null,
+        status: lastReport?.overallStatus || 'UNKNOWN'
+      });
+    } catch (error) {
+      console.error("Error getting reconciliation status:", error);
+      res.status(500).json({ error: "Failed to get reconciliation status" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
