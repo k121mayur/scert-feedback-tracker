@@ -67,8 +67,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/check-exam-exists/:mobile/:topicId/:date", async (req, res) => {
     try {
       const { mobile, topicId, date } = req.params;
+      
+      // AUTHENTICATE: Check if teacher exists in authentic database
+      const teacher = await storage.getTeacherByMobile(mobile);
+      if (!teacher) {
+        return res.status(403).json({ 
+          message: "Teacher not registered. Please contact administrator for registration.",
+          authenticated: false
+        });
+      }
+      
       const exists = await storage.checkExamExists(mobile, topicId, date);
-      res.json({ exists });
+      res.json({ exists, authenticated: true });
     } catch (error) {
       console.error("Error checking exam existence:", error);
       res.status(500).json({ message: "Server error" });
@@ -79,6 +89,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/exam-questions/:topicId", rateLimit(5, 60000), async (req, res) => {
     try {
       const { topicId } = req.params;
+      const { mobile } = req.query;
+      
+      if (!mobile) {
+        return res.json({ status: "error", message: "Mobile number required for authentication" });
+      }
+      
+      // AUTHENTICATE: Check if teacher exists in authentic database
+      const teacher = await storage.getTeacherByMobile(mobile as string);
+      if (!teacher) {
+        return res.json({ 
+          status: "error", 
+          message: "Teacher not registered. Please contact administrator for registration." 
+        });
+      }
       
       // Use optimized random question selection
       const questions = await storage.getRandomQuestionsByTopic(topicId, 5);
@@ -114,6 +138,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Invalid mobile number" });
       }
 
+      // AUTHENTICATE: Check if teacher exists in authentic database
+      const teacher = await storage.getTeacherByMobile(mobile);
+      if (!teacher) {
+        return res.json({ 
+          success: false, 
+          message: "Teacher not registered. Please contact administrator for registration." 
+        });
+      }
+
       const batchTeacher = await storage.getBatchTeacherByMobile(mobile);
       
       if (!batchTeacher) {
@@ -136,6 +169,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/questions/:topicId/:mobile", rateLimit(5, 60000), async (req, res) => {
     try {
       const { topicId, mobile } = req.params;
+      
+      // AUTHENTICATE: Check if teacher exists in authentic database first
+      const teacher = await storage.getTeacherByMobile(mobile);
+      if (!teacher) {
+        return res.json({ 
+          status: "error", 
+          message: "Teacher not registered. Please contact administrator for registration." 
+        });
+      }
       
       // Optimized batch teacher lookup with caching
       const batchTeacher = await storage.getBatchTeacherByMobile(mobile);
