@@ -441,7 +441,7 @@ export default function Admin() {
               </Button>
               <Shield className="h-8 w-8 text-primary" />
               <div>
-                <h1 className="text-2xl font-medium text-foreground">Administration Panel</h1>
+                <h1 className="text-2xl font-medium text-foreground">NIPUN Teachers Portal - Admin</h1>
                 <p className="text-muted-foreground mt-1">Manage batches, teachers, and system data</p>
               </div>
             </div>
