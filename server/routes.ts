@@ -260,7 +260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         const totalQuestions = questions.length;
-        const percentage = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
+        const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
         // Save exam result directly
         const examResult = await storage.addExamResult({
@@ -299,12 +299,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({
           success: true,
           processing: false,
-          results: {
+          result: {
             correctCount,
             wrongCount,
             unansweredCount,
             totalQuestions,
-            percentage: Math.round(percentage * 100) / 100
+            percentage
           },
           message: "Exam completed successfully!",
           examId: examResult.id
