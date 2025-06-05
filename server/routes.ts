@@ -417,16 +417,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         district: data.district
       }));
 
-      // Submit feedback
-      await storage.submitTrainerFeedback(feedbackEntries);
+      // Check for concurrent load and use appropriate processing strategy
+      const currentLoad = await queueManager.getQueueLength();
+      const shouldUseQueue = currentLoad > 100; // Queue threshold for feedback submissions
+      
+      if (shouldUseQueue) {
+        // High-load scenario: Queue the feedback submission
+        const feedbackJob = {
+          id: `feedback_${data.mobile_no}_${Date.now()}`,
+          type: 'feedback_submission',
+          data: {
+            topic_name: data.topic_name,
+            mobile_no: data.mobile_no,
+            batch_name: data.batch_name,
+            district: data.district,
+            questions: data.questions,
+            feedback_answers: data.feedback_answers
+          },
+          priority: 2, // Medium priority for feedback
+          timestamp: Date.now()
+        };
+        
+        await queueManager.addJob(feedbackJob);
+        
+        res.json({
+          success: true,
+          processing: true,
+          message: "Feedback submission queued for processing",
+          queuePosition: await queueManager.getQueueLength()
+        });
+      } else {
+        // Low-load scenario: Process immediately
+        await storage.submitTrainerFeedback(feedbackEntries);
 
-      // Create topic feedback record to prevent duplicates
-      await storage.createTopicFeedback({
-        topicName: data.topic_name,
-        mobile: data.mobile_no
-      });
+        // Create topic feedback record to prevent duplicates
+        await storage.createTopicFeedback({
+          topicName: data.topic_name,
+          mobile: data.mobile_no
+        });
 
-      res.json("success");
+        res.json({
+          success: true,
+          processing: false,
+          message: "Feedback submitted successfully!"
+        });
+      }
     } catch (error) {
       console.error("Error submitting feedback:", error);
       res.status(500).json({ message: "Server error" });
