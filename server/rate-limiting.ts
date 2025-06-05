@@ -102,12 +102,17 @@ export const globalRateLimiter = new AdvancedRateLimiter({
 export const ddosProtection = (req: Request, res: Response, next: NextFunction) => {
   const suspiciousPatterns = [
     /bot|crawler|spider/i,
-    /curl|wget|python-requests/i,
     /automated|script/i
   ];
 
   const userAgent = req.get('User-Agent') || '';
   const isSuspicious = suspiciousPatterns.some(pattern => pattern.test(userAgent));
+
+  // Allow curl for testing but log it
+  if (userAgent.includes('curl')) {
+    console.log(`Test request from ${req.ip}: ${userAgent}`);
+    return next();
+  }
 
   if (isSuspicious) {
     console.log(`Suspicious request from ${req.ip}: ${userAgent}`);

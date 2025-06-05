@@ -828,6 +828,53 @@ export class DatabaseStorage implements IStorage {
       }
     }
   }
+
+  async addExamResult(examData: any): Promise<any> {
+    try {
+      const [result] = await db
+        .insert(examResults)
+        .values({
+          mobile: examData.mobile,
+          topicId: examData.topicId,
+          topicName: examData.topicName,
+          assessmentDate: examData.assessmentDate,
+          batchName: examData.batchName,
+          district: examData.district,
+          correctCount: examData.correctCount,
+          wrongCount: examData.wrongCount,
+          unansweredCount: examData.unansweredCount,
+          totalQuestions: examData.totalQuestions,
+          percentage: examData.percentage,
+          submittedAt: examData.submittedAt
+        })
+        .returning();
+      
+      return result;
+    } catch (error) {
+      console.error("Error saving exam result:", error);
+      throw error;
+    }
+  }
+
+  async addExamAnswer(answerData: any): Promise<any> {
+    try {
+      const [result] = await db
+        .insert(examAnswers)
+        .values({
+          examResultId: answerData.examResultId,
+          questionId: answerData.questionId,
+          selectedAnswer: answerData.selectedAnswer,
+          correctAnswer: answerData.correctAnswer,
+          isCorrect: answerData.isCorrect
+        })
+        .returning();
+      
+      return result;
+    } catch (error) {
+      console.error("Error saving exam answer:", error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

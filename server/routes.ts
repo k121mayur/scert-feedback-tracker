@@ -262,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const percentage = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
 
         // Save exam result directly
-        const examResult = await storage.createExamResult({
+        const examResult = await storage.addExamResult({
           mobile: data.mobile,
           topicId: data.topic_id,
           topicName: data.topic_name,
@@ -279,7 +279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Save individual answers
         for (let i = 0; i < data.answers.length && i < questions.length; i++) {
-          await storage.createExamAnswer({
+          await storage.addExamAnswer({
             examResultId: examResult.id,
             questionId: questions[i].id,
             selectedAnswer: data.answers[i],
