@@ -149,8 +149,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAssessmentsByDate(date: string): Promise<AssessmentSchedule[]> {
-    return await db.select().from(assessmentSchedules)
-      .where(and(eq(assessmentSchedules.assessmentDate, date), eq(assessmentSchedules.isActive, true)));
+    try {
+      const activeAssessments = await db.select().from(assessmentSchedules)
+        .where(and(eq(assessmentSchedules.assessmentDate, date), eq(assessmentSchedules.isActive, true)));
+      
+      // If no active assessments found for this date, return empty array to prevent fallback to all topics
+      if (activeAssessments.length === 0) {
+        console.log(`No active assessments configured for date: ${date}`);
+        return [];
+      }
+      
+      return activeAssessments;
+    } catch (error) {
+      console.error(`Error fetching assessments for date ${date}:`, error);
+      return [];
+    }
   }
 
   async getAllAssessmentDates(): Promise<string[]> {
