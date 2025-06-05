@@ -16,6 +16,7 @@ import {
 } from "./rate-limiting";
 import { queueProcessor } from "./queue-processor";
 import { connectionOptimizer } from "./connection-optimizer";
+import { loadTestOptimizer } from "./load-test-optimizer";
 
 const app = express();
 
@@ -105,6 +106,22 @@ app.use((req, res, next) => {
   next();
 });
 
+// Node.js process optimization for high concurrent load
+process.setMaxListeners(0); // Remove event emitter limits
+
+// Increase UV thread pool size for I/O operations
+process.env.UV_THREADPOOL_SIZE = '128';
+
+// Optimize garbage collection for high throughput
+if (typeof global.gc === 'function') {
+  setInterval(() => {
+    const memUsage = process.memoryUsage();
+    if (memUsage.heapUsed > 800 * 1024 * 1024 && global.gc) { // 800MB
+      global.gc();
+    }
+  }, 30000); // Every 30 seconds
+}
+
 (async () => {
   const server = await registerRoutes(app);
 
@@ -150,6 +167,9 @@ app.use((req, res, next) => {
     // Start queue processor for exam submissions
     queueProcessor.startProcessing();
     
+    // Apply load testing optimizations
+    loadTestOptimizer.applyOptimizations();
+    
     // Start connection optimization monitoring
     connectionOptimizer.on('metrics', (metrics) => {
       if (metrics.connectionErrors > 50) {
@@ -157,6 +177,13 @@ app.use((req, res, next) => {
       }
       if (metrics.averageResponseTime > 2000) {
         log(`High response times detected: ${metrics.averageResponseTime}ms`);
+      }
+    });
+    
+    // Monitor load test optimizations
+    loadTestOptimizer.on('metrics', (metrics) => {
+      if (metrics.errorRate > 0.1) {
+        log(`High load test error rate: ${(metrics.errorRate * 100).toFixed(1)}%`);
       }
     });
     
