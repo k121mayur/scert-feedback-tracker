@@ -71,7 +71,7 @@ class QueueProcessor {
       const percentage = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
 
       // Save exam result
-      const examResult = await storage.saveExamResult({
+      const examResult = await storage.submitExamResult({
         mobile: examData.mobile,
         topicId: examData.topic_id,
         topicName: examData.topic_name,
@@ -81,22 +81,26 @@ class QueueProcessor {
         correctCount,
         wrongCount,
         unansweredCount,
-        totalQuestions,
-        percentage,
-        submittedAt: new Date()
+        totalQuestions
       });
 
       // Save individual answers
+      const answerData = [];
       for (let i = 0; i < examData.answers.length; i++) {
         if (i < questions.length) {
-          await storage.saveExamAnswer({
-            examResultId: examResult.id,
-            questionId: questions[i].id,
+          answerData.push({
+            mobile: examData.mobile,
+            topicId: examData.topic_id,
+            question: questions[i].question,
             selectedAnswer: examData.answers[i],
             correctAnswer: correctAnswers[i],
             isCorrect: examData.answers[i] === correctAnswers[i]
           });
         }
+      }
+      
+      if (answerData.length > 0) {
+        await storage.submitExamAnswers(answerData);
       }
 
       // Update status to completed

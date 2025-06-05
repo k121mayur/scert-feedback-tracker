@@ -861,8 +861,9 @@ export class DatabaseStorage implements IStorage {
       const [result] = await db
         .insert(examAnswers)
         .values({
-          examResultId: answerData.examResultId,
-          questionId: answerData.questionId,
+          mobile: answerData.mobile,
+          topicId: answerData.topicId,
+          question: answerData.question,
           selectedAnswer: answerData.selectedAnswer,
           correctAnswer: answerData.correctAnswer,
           isCorrect: answerData.isCorrect
