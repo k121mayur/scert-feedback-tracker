@@ -85,17 +85,23 @@ export const batchTeachers = pgTable("batch_teachers", {
 // Questions table
 export const questions = pgTable("questions", {
   id: serial("id").primaryKey(),
+  serviceType: text("service_type"),
+  trainingGroup: text("training_group"),
   topicId: text("topic_id").notNull(),
+  topic: text("topic").notNull(),
   question: text("question").notNull(),
   optionA: text("option_a").notNull(),
   optionB: text("option_b").notNull(),
   optionC: text("option_c").notNull(),
   optionD: text("option_d").notNull(),
-  correctAnswer: varchar("correct_answer", { length: 1 }).notNull(),
+  correctAnswer: varchar("correct_answer", { length: 1 }),
+  correctOption: varchar("correct_option", { length: 1 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => {
   return {
     topicIdIdx: index("idx_questions_topic_id").on(table.topicId),
+    serviceTypeIdx: index("idx_questions_service_type").on(table.serviceType),
+    trainingGroupIdx: index("idx_questions_training_group").on(table.trainingGroup),
     createdAtIdx: index("idx_questions_created_at").on(table.createdAt),
   };
 });
