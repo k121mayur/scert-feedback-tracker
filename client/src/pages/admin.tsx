@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BatchTable } from "@/components/batch-table";
 import { CsvUpload } from "@/components/csv-upload";
+import { BulkTeacherImport } from "@/components/bulk-teacher-import";
 import { Users, FileText, BarChart3, Shield, UserSearch, ArrowLeft, Plus, Edit, Settings, Calendar, BookOpen, Save } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";

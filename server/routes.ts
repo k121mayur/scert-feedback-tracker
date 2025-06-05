@@ -700,7 +700,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (!existingTeacher) {
                 await storage.createTeacher({
                   teacherName,
-                  teacherMobile: phoneNumber,
+                  mobile: phoneNumber,
                   district,
                   teacherId: teacherId === 'null' || !teacherId ? null : teacherId,
                   serviceType: serviceType || "Selection Grade",
@@ -722,8 +722,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 serviceType: serviceType || "Selection Grade",
                 trainingGroup: trainingGroup || "Primary",
                 teacherId: teacherId === 'null' || !teacherId ? null : teacherId,
-                topicId: null,
-                stopTime: null
+                topicId: undefined,
+                stopTime: undefined
               });
               importedBatchTeachers++;
             }
