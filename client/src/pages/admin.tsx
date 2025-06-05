@@ -67,8 +67,9 @@ export default function Admin() {
 
     try {
       const response = await apiRequest('POST', '/api/admin/login', loginForm);
+      const data = await response.json();
       
-      if (response.success) {
+      if (data.success) {
         sessionStorage.setItem('adminAuth', 'authenticated');
         setIsAuthenticated(true);
         toast({
