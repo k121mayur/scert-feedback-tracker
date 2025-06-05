@@ -119,7 +119,17 @@ export default function Exam() {
 
   const loadNewExamQuestions = async (topicId: string) => {
     try {
-      const response = await fetch(`/api/exam-questions/${topicId}`);
+      if (!examData?.mobile) {
+        toast({
+          title: "Error",
+          description: "Mobile number is required for authentication.",
+          variant: "destructive",
+        });
+        setLocation('/');
+        return;
+      }
+
+      const response = await fetch(`/api/exam-questions/${topicId}?mobile=${examData.mobile}`);
       const data = await response.json();
 
       if (data.status === "error") {
