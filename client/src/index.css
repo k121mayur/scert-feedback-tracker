@@ -207,3 +207,74 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-500;
 }
+
+/* Mobile-optimized feedback form styles */
+@media (max-width: 640px) {
+  /* Ensure touch targets are at least 44px for accessibility */
+  .feedback-radio-option {
+    min-height: 44px;
+    padding: 12px 16px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  /* Improve radio button touch target */
+  input[type="radio"] {
+    min-width: 20px;
+    min-height: 20px;
+    margin-right: 12px;
+  }
+  
+  /* Better spacing for mobile forms */
+  .feedback-form-spacing {
+    margin-bottom: 24px;
+  }
+  
+  /* Optimize button size for mobile */
+  .mobile-submit-btn {
+    min-height: 48px;
+    font-size: 16px;
+    font-weight: 500;
+    width: 100%;
+  }
+  
+  /* Better text readability on mobile */
+  .feedback-question-text {
+    font-size: 16px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  
+  /* Improved spacing between options */
+  .feedback-options-container {
+    gap: 12px;
+  }
+}
+
+/* Better focus states for accessibility */
+.feedback-radio-label:focus-within {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Enhanced visual feedback for radio selections */
+input[type="radio"]:checked + .feedback-radio-label {
+  background-color: hsl(var(--primary) / 0.1);
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary));
+  font-weight: 500;
+}
+
+/* Smooth transitions for better UX */
+.feedback-radio-label {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Prevent text selection on option labels for better mobile experience */
+.feedback-radio-label {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}

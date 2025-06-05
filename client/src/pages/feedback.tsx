@@ -273,117 +273,92 @@ export default function Feedback() {
   }
 
   return (
-    <div className="min-h-screen bg-background py-12">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Card className="material-shadow-2">
-          <CardHeader className="bg-accent text-accent-foreground rounded-t-lg">
-            <CardTitle className="text-2xl font-medium flex items-center">
-              <MessageSquare className="mr-2" />
-              Training Feedback
-            </CardTitle>
-            <p className="text-accent-foreground/80 mt-1">Help us improve our training programs</p>
-          </CardHeader>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-lg mx-auto p-4">
+        {/* Simple Header */}
+        <div className="text-center mb-6 pt-6">
+          <Heart className="h-8 w-8 text-red-500 mx-auto mb-3" />
+          <h1 className="text-xl font-semibold text-foreground">प्रशिक्षक मूल्यांकन</h1>
+          <p className="text-sm text-muted-foreground mt-1">कृपया सर्व प्रश्नांची उत्तरे द्या</p>
+        </div>
 
-          <CardContent className="p-8">
-            <div className="text-center mb-8">
-              <MessageSquare className="h-12 w-12 text-accent mx-auto mb-4" />
-              <h2 className="text-xl font-medium text-foreground">We Value Your Feedback</h2>
-              <p className="text-muted-foreground mt-2">
-                Your feedback helps us improve the quality of our training programs
-              </p>
-            </div>
-
-            <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-8">
-              {questions.map((question, index) => (
-                <Card key={question.id} className="p-6 border border-border">
-                  <h3 className="text-lg font-medium text-foreground mb-4">
-                    <span className="text-accent font-bold">{index + 1}.</span> {question.feedbackQues}
-                  </h3>
-                  
-                  <RadioGroup
-                    value={answers[question.id] || ''}
-                    onValueChange={(value) => handleAnswerChange(question.id, value)}
-                  >
-                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-                      {[question.option1, question.option2, question.option3, question.option4, question.option5].map((option, optionIndex) => (
-                        <div key={optionIndex} className="feedback-option">
-                          <div className="flex items-center">
-                            <RadioGroupItem
-                              value={option}
-                              id={`q${question.id}_option${optionIndex}`}
-                              className="mr-2"
-                            />
-                            <Label
-                              htmlFor={`q${question.id}_option${optionIndex}`}
-                              className={`flex-1 flex items-center justify-center p-3 border rounded-lg cursor-pointer transition-colors text-sm font-medium min-h-[48px] ${
-                                answers[question.id] === option 
-                                  ? 'border-primary bg-primary/10 text-primary' 
-                                  : 'border-border hover:bg-muted'
-                              }`}
-                            >
-                              {option}
-                            </Label>
-                          </div>
-                        </div>
-                      ))}
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-6">
+          {questions.map((question, index) => (
+            <div key={question.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg border">
+              <h3 className="text-base font-medium text-foreground mb-3 leading-relaxed">
+                {index + 1}. {question.feedbackQues}
+              </h3>
+              
+              <RadioGroup
+                value={answers[question.id] || ''}
+                onValueChange={(value) => handleAnswerChange(question.id, value)}
+              >
+                <div className="space-y-2">
+                  {[question.option1, question.option2, question.option3, question.option4, question.option5].map((option, optionIndex) => (
+                    <div key={optionIndex} className="flex items-center space-x-3">
+                      <RadioGroupItem
+                        value={option}
+                        id={`q${question.id}_option${optionIndex}`}
+                        className="text-primary"
+                      />
+                      <Label
+                        htmlFor={`q${question.id}_option${optionIndex}`}
+                        className={`flex-1 p-2 rounded cursor-pointer transition-colors text-sm ${
+                          answers[question.id] === option 
+                            ? 'bg-primary/10 text-primary font-medium' 
+                            : 'hover:bg-muted'
+                        }`}
+                      >
+                        {option}
+                      </Label>
                     </div>
-                  </RadioGroup>
-                </Card>
-              ))}
-
-              {/* Progress Indicator */}
-              <div className="bg-muted p-4 rounded-lg">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-foreground">Progress</span>
-                  <span className="text-sm text-muted-foreground">
-                    {Object.keys(answers).length} of {questions.length} answered
-                  </span>
+                  ))}
                 </div>
-                <div className="w-full bg-background rounded-full h-2">
-                  <div 
-                    className="bg-accent h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${(Object.keys(answers).length / questions.length) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
+              </RadioGroup>
+            </div>
+          ))}
 
-              {/* Submit Button */}
-              <div className="text-center pt-6">
-                <Button
-                  type="submit"
-                  disabled={submitting || Object.keys(answers).length !== questions.length}
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground px-8 py-3 material-shadow-1 hover:material-shadow-2 transition-all"
-                  size="lg"
-                >
-                  {submitting ? (
-                    <>
-                      <div className="loading-spinner w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2"></div>
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Submit Feedback
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
+          {/* Simple Progress */}
+          <div className="bg-muted p-3 rounded-lg">
+            <div className="flex justify-between items-center text-sm">
+              <span>प्रगती</span>
+              <span>{Object.keys(answers).length}/{questions.length}</span>
+            </div>
+            <div className="w-full bg-background rounded-full h-2 mt-2">
+              <div 
+                className="bg-primary h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(Object.keys(answers).length / questions.length) * 100}%` }}
+              ></div>
+            </div>
+          </div>
 
-            {/* Guidelines */}
-            <Card className="mt-8 bg-blue-50 border-blue-200">
-              <CardContent className="p-4">
-                <h4 className="font-medium text-blue-900 mb-2">Feedback Guidelines:</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Please answer all questions honestly</li>
-                  <li>• Your feedback will help improve future training sessions</li>
-                  <li>• All responses are confidential</li>
-                  <li>• You can only submit feedback once per topic</li>
-                </ul>
-              </CardContent>
-            </Card>
-          </CardContent>
-        </Card>
+          {/* Submit Button */}
+          <Button
+            type="submit"
+            disabled={submitting || Object.keys(answers).length !== questions.length}
+            className="w-full py-3 text-base font-medium"
+            size="lg"
+          >
+            {submitting ? (
+              <>
+                <div className="loading-spinner w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2"></div>
+                सबमिट करत आहे...
+              </>
+            ) : (
+              <>
+                <Send className="mr-2 h-4 w-4" />
+                मूल्यांकन सबमिट करा
+              </>
+            )}
+          </Button>
+        </form>
+
+        {/* Simple Note */}
+        <div className="mt-6 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <p className="text-xs text-blue-800 dark:text-blue-200 text-center">
+            आपले मत गुपचूप ठेवले जाईल आणि प्रशिक्षण सुधारण्यासाठी वापरले जाईल
+          </p>
+        </div>
       </div>
     </div>
   );
