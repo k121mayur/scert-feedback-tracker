@@ -13,11 +13,13 @@ export const users = pgTable("users", {
 // Teachers table
 export const teachers = pgTable("teachers", {
   id: serial("id").primaryKey(),
-  teacherId: text("teacher_id").notNull(),
+  teacherId: text("teacher_id"),
   teacherName: text("teacher_name").notNull(),
-  mobile: varchar("mobile", { length: 10 }).notNull(),
+  mobile: varchar("mobile", { length: 15 }).notNull(),
   payId: text("pay_id"),
   district: text("district"),
+  serviceType: text("service_type"),
+  trainingGroup: text("training_group"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => {
   return {
@@ -60,12 +62,14 @@ export const batchTeachers = pgTable("batch_teachers", {
   id: serial("id").primaryKey(),
   batchName: text("batch_name").notNull(),
   district: text("district").notNull(),
-  teacherId: text("teacher_id").notNull(),
+  teacherId: text("teacher_id"),
   teacherName: text("teacher_name").notNull(),
-  teacherMobile: varchar("teacher_mobile", { length: 10 }).notNull(),
-  topicId: text("topic_id").notNull(),
+  teacherMobile: varchar("teacher_mobile", { length: 15 }).notNull(),
+  serviceType: text("service_type"),
+  trainingGroup: text("training_group"),
+  topicId: text("topic_id"),
   registerId: text("register_id"),
-  stopTime: timestamp("stop_time").notNull(),
+  stopTime: timestamp("stop_time"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => {
   return {

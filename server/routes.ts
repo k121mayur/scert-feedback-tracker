@@ -624,6 +624,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Bulk import teachers from CSV
+  app.post("/api/admin/bulk-import-teachers", upload.single("csvFile"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const csvData = req.file.buffer.toString();
+      const records: any[] = [];
+
+      // Parse CSV
+      await new Promise((resolve, reject) => {
+        parse(csvData, { columns: true, skip_empty_lines: true }, (err: any, output: any) => {
+          if (err) reject(err);
+          else {
+            records.push(...output);
+            resolve(output);
+          }
+        });
+      });
+
+      console.log(`Starting bulk import of ${records.length} teacher records`);
+
+      let importedBatches = 0;
+      let importedTeachers = 0;
+      let importedBatchTeachers = 0;
+      let skippedRecords = 0;
+      let errors: string[] = [];
+
+      // Track unique batches and teachers to avoid duplicates
+      const processedBatches = new Set<string>();
+      const processedTeachers = new Set<string>();
+
+      // Process records in batches for better performance
+      const batchSize = 100;
+      for (let i = 0; i < records.length; i += batchSize) {
+        const batch = records.slice(i, i + batchSize);
+        
+        for (const record of batch) {
+          try {
+            const district = record.District?.trim();
+            const batchName = record['batch Name']?.trim() || record['Batch Name']?.trim();
+            const serviceType = record['Service type']?.trim();
+            const trainingGroup = record['Training group']?.trim();
+            const teacherId = record['Teacher ID']?.trim();
+            const teacherName = record['Teacher name']?.trim();
+            const phoneNumber = record['Phone number']?.trim();
+
+            // Skip records with missing essential data
+            if (!district || !batchName || !teacherName || !phoneNumber) {
+              skippedRecords++;
+              continue;
+            }
+
+            // Create batch if not already processed
+            if (!processedBatches.has(batchName)) {
+              const existingBatch = await storage.getBatch(batchName);
+              if (!existingBatch) {
+                await storage.createBatch({
+                  batchName,
+                  district,
+                  coordinatorName: "System Import",
+                  serviceType: serviceType || "Selection Grade",
+                  trainingGroup: trainingGroup || "Primary"
+                });
+                importedBatches++;
+              }
+              processedBatches.add(batchName);
+            }
+
+            // Create teacher if not already processed
+            if (!processedTeachers.has(phoneNumber)) {
+              const existingTeacher = await storage.getTeacherByMobile(phoneNumber);
+              if (!existingTeacher) {
+                await storage.createTeacher({
+                  teacherName,
+                  teacherMobile: phoneNumber,
+                  district,
+                  teacherId: teacherId === 'null' || !teacherId ? null : teacherId,
+                  serviceType: serviceType || "Selection Grade",
+                  trainingGroup: trainingGroup || "Primary"
+                });
+                importedTeachers++;
+              }
+              processedTeachers.add(phoneNumber);
+            }
+
+            // Create batch teacher relationship
+            const existingBatchTeacher = await storage.getBatchTeacherByMobile(phoneNumber);
+            if (!existingBatchTeacher) {
+              await storage.createBatchTeacher({
+                teacherName,
+                teacherMobile: phoneNumber,
+                batchName,
+                district,
+                serviceType: serviceType || "Selection Grade",
+                trainingGroup: trainingGroup || "Primary",
+                teacherId: teacherId === 'null' || !teacherId ? null : teacherId,
+                topicId: null,
+                stopTime: null
+              });
+              importedBatchTeachers++;
+            }
+
+          } catch (error: any) {
+            errors.push(`Record ${i + 1}: ${error.message}`);
+            skippedRecords++;
+          }
+        }
+
+        // Progress logging for large imports
+        if (i % 1000 === 0) {
+          console.log(`Processed ${Math.min(i + batchSize, records.length)} / ${records.length} records`);
+        }
+      }
+
+      console.log(`Bulk import completed: ${importedTeachers} teachers, ${importedBatches} batches, ${importedBatchTeachers} batch relationships`);
+
+      res.json({
+        success: true,
+        message: "Teacher bulk import completed successfully",
+        summary: {
+          totalRecords: records.length,
+          importedTeachers,
+          importedBatches,
+          importedBatchTeachers,
+          skippedRecords,
+          errors: errors.slice(0, 10)
+        }
+      });
+
+    } catch (error) {
+      console.error("Error in teacher bulk import:", error);
+      res.status(500).json({ message: "Error processing teacher bulk import" });
+    }
+  });
+
   // Admin: Get statistics
   app.get("/api/admin/stats", async (req, res) => {
     try {
