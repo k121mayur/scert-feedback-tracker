@@ -16,17 +16,17 @@ if (!process.env.DATABASE_URL) {
 // Optimized connection pool for high-load (40k concurrent users)
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 100, // Reduced to prevent overwhelming Neon
-  min: 20,  // Reasonable minimum for startup
-  idleTimeoutMillis: 30000, // Longer idle timeout for stability
-  connectionTimeoutMillis: 10000, // Increased timeout for reliability
+  max: 150, // Increased for 40K concurrent users with load balancing
+  min: 25,  // Higher minimum for immediate availability
+  idleTimeoutMillis: 20000, // Reduced idle timeout for faster recycling
+  connectionTimeoutMillis: 5000, // Faster timeout for better failover
   allowExitOnIdle: true,
-  maxUses: 7500, // Connection lifecycle
+  maxUses: 10000, // Higher connection lifecycle for efficiency
   keepAlive: true,
-  // Query timeout optimizations
-  statement_timeout: 15000, // 15 second query timeout
-  query_timeout: 15000, // Match statement timeout
-  application_name: 'teacher_assessment_scalable',
+  // Query timeout optimizations for high concurrency
+  statement_timeout: 10000, // 10 second query timeout
+  query_timeout: 8000, // Slightly lower for faster failover
+  application_name: 'maharashtra_teacher_assessment_40k',
 });
 
 export const db = drizzle({ client: pool, schema });
@@ -48,5 +48,60 @@ export async function checkDatabaseHealth(): Promise<boolean> {
   } catch (error) {
     console.error('Database health check failed:', error);
     return false;
+  }
+}
+
+// Performance monitoring for 40K concurrent users
+export async function getConnectionStats() {
+  return {
+    totalConnections: pool.totalCount,
+    idleConnections: pool.idleCount,
+    waitingClients: pool.waitingCount,
+    maxConnections: 150,
+    utilizationPercent: Math.round((pool.totalCount / 150) * 100)
+  };
+}
+
+// Query performance analyzer
+export async function analyzeQueryPerformance() {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        query,
+        calls,
+        total_time,
+        mean_time,
+        rows
+      FROM pg_stat_statements 
+      WHERE query NOT LIKE '%pg_stat_statements%'
+      ORDER BY mean_time DESC 
+      LIMIT 10
+    `);
+    return result.rows;
+  } catch (error) {
+    console.log('Query performance analysis unavailable (pg_stat_statements not enabled)');
+    return [];
+  }
+}
+
+// Index usage monitoring
+export async function getIndexUsageStats() {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        schemaname,
+        tablename,
+        indexname,
+        idx_scan,
+        idx_tup_read,
+        idx_tup_fetch
+      FROM pg_stat_user_indexes 
+      WHERE idx_scan > 0
+      ORDER BY idx_scan DESC
+    `);
+    return result.rows;
+  } catch (error) {
+    console.error('Index usage stats error:', error);
+    return [];
   }
 }
