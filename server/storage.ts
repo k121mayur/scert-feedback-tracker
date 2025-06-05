@@ -97,6 +97,7 @@ export interface IStorage {
   getAssessmentControlTopics(): Promise<{ id: string; name: string; isActive: boolean; }[]>;
   updateAssessmentDateStatus(date: string, isActive: boolean): Promise<void>;
   updateTopicActiveStatus(topicId: string, isActive: boolean): Promise<void>;
+  updateDateTopicAssociation(date: string, topicId: string, isActive: boolean): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -493,97 +494,164 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAssessmentControlDates(): Promise<{ date: string; isActive: boolean; topics: { id: string; name: string; isActive: boolean; }[]; }[]> {
-    // Get all assessment schedules with their topics
-    const schedules = await db.select({
-      date: assessmentSchedules.assessmentDate,
-      isActive: assessmentSchedules.isActive,
-      topicId: assessmentSchedules.topicId,
-      topicName: assessmentSchedules.topicName
-    })
-    .from(assessmentSchedules)
-    .orderBy(assessmentSchedules.assessmentDate, assessmentSchedules.topicId);
-    
-    // Group by date and collect topics for each date
-    const dateMap = new Map<string, { date: string; isActive: boolean; topics: { id: string; name: string; isActive: boolean; }[]; }>();
-    
-    schedules.forEach(schedule => {
-      const dateKey = schedule.date;
+    try {
+      // Get all unique dates from assessment schedules
+      const dates = await db.selectDistinct({ 
+        date: assessmentSchedules.assessmentDate 
+      }).from(assessmentSchedules);
+
+      // Get all unique topics from questions
+      const allTopics = await db.selectDistinct({ 
+        topicId: questions.topicId,
+        topicName: questions.topic
+      }).from(questions).orderBy(questions.topicId);
+
+      // Build the result structure
+      const result = [];
       
-      if (!dateMap.has(dateKey)) {
-        // Find if all topics for this date are active to determine date status
-        const dateSchedules = schedules.filter(s => s.date === schedule.date);
-        const allTopicsActive = dateSchedules.every(s => s.isActive);
+      for (const dateItem of dates) {
+        const dateStr = dateItem.date;
         
-        dateMap.set(dateKey, {
-          date: schedule.date,
-          isActive: allTopicsActive,
-          topics: []
+        // Check if this date is generally active (if any schedule for this date is active)
+        const activeDateCheck = await db.select({
+          isActive: assessmentSchedules.isActive
+        }).from(assessmentSchedules)
+        .where(eq(assessmentSchedules.assessmentDate, dateStr))
+        .limit(1);
+
+        const isDateActive = activeDateCheck.length > 0 ? activeDateCheck[0].isActive : true;
+
+        // Get topic associations for this date
+        const dateTopics = await db.select({
+          topicId: assessmentSchedules.topicId,
+          topicName: assessmentSchedules.topicName,
+          isActive: assessmentSchedules.isActive
+        }).from(assessmentSchedules)
+        .where(eq(assessmentSchedules.assessmentDate, dateStr));
+
+        // Create a map of existing topic associations
+        const topicMap = new Map();
+        dateTopics.forEach(topic => {
+          topicMap.set(topic.topicId, {
+            id: topic.topicId,
+            name: topic.topicName,
+            isActive: topic.isActive
+          });
+        });
+
+        // Include all available topics, marking those not associated as inactive
+        const topics = allTopics.map(topic => {
+          return topicMap.get(topic.topicId) || {
+            id: topic.topicId,
+            name: topic.topicName || topic.topicId,
+            isActive: false
+          };
+        });
+
+        result.push({
+          date: dateStr,
+          isActive: isDateActive,
+          topics: topics
         });
       }
-      
-      const dateEntry = dateMap.get(dateKey)!;
-      
-      // Add topic if not already present
-      const topicExists = dateEntry.topics.some(t => t.id === schedule.topicId);
-      if (!topicExists) {
-        dateEntry.topics.push({
-          id: schedule.topicId,
-          name: schedule.topicName,
-          isActive: schedule.isActive // Use actual database value
-        });
-      }
-    });
-    
-    return Array.from(dateMap.values());
+
+      return result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    } catch (error) {
+      console.error("Error fetching assessment control dates:", error);
+      return [];
+    }
   }
 
   async getAssessmentControlTopics(): Promise<{ id: string; name: string; isActive: boolean; }[]> {
-    const topics = await db.select({
-      id: questions.topicId
-    })
-    .from(questions)
-    .groupBy(questions.topicId)
-    .orderBy(questions.topicId);
-    
-    // Create a map of topic names based on topicId
-    const topicNames: { [key: string]: string } = {
-      'MATH_BASIC': 'Basic Mathematics',
-      'MATH_ADVANCED': 'Advanced Mathematics',
-      'SCIENCE_PHYSICS': 'Physics',
-      'SCIENCE_CHEMISTRY': 'Chemistry',
-      'SCIENCE_BIOLOGY': 'Biology',
-      'ENGLISH_GRAMMAR': 'English Grammar',
-      'ENGLISH_LITERATURE': 'English Literature',
-      'HINDI_BASIC': 'Basic Hindi',
-      'MARATHI_BASIC': 'Basic Marathi',
-      'HISTORY_INDIA': 'Indian History',
-      'GEOGRAPHY_INDIA': 'Indian Geography',
-      'CIVICS_BASIC': 'Basic Civics',
-      'ECONOMICS_BASIC': 'Basic Economics',
-      'COMPUTER_BASIC': 'Basic Computer',
-      'ARTS_DRAWING': 'Drawing and Arts',
-      'SPORTS_GENERAL': 'Sports and Physical Education'
-    };
-    
-    return topics.map(topic => ({
-      id: topic.id,
-      name: topicNames[topic.id] || topic.id,
-      isActive: true // Default to active since we don't have topic-level control yet
-    }));
+    try {
+      const topics = await db.selectDistinct({
+        id: questions.topicId,
+        name: questions.topic
+      })
+      .from(questions)
+      .orderBy(questions.topicId);
+      
+      return topics.map(topic => ({
+        id: topic.id,
+        name: topic.name || topic.id,
+        isActive: true // Default to active - can be enhanced later for global topic control
+      }));
+    } catch (error) {
+      console.error("Error fetching assessment control topics:", error);
+      return [];
+    }
   }
 
   async updateAssessmentDateStatus(date: string, isActive: boolean): Promise<void> {
-    await db.update(assessmentSchedules)
-      .set({ isActive })
-      .where(eq(assessmentSchedules.assessmentDate, date));
+    try {
+      await db.update(assessmentSchedules)
+        .set({ isActive })
+        .where(eq(assessmentSchedules.assessmentDate, date));
+    } catch (error) {
+      console.error(`Error updating date status for ${date}:`, error);
+      throw error;
+    }
   }
 
   async updateTopicActiveStatus(topicId: string, isActive: boolean): Promise<void> {
-    await db.update(assessmentSchedules)
-      .set({ isActive })
-      .where(eq(assessmentSchedules.topicId, topicId));
-    
-    console.log(`Topic ${topicId} active status updated to ${isActive}`);
+    try {
+      await db.update(assessmentSchedules)
+        .set({ isActive })
+        .where(eq(assessmentSchedules.topicId, topicId));
+      
+      console.log(`Topic ${topicId} active status updated to ${isActive}`);
+    } catch (error) {
+      console.error(`Error updating topic status for ${topicId}:`, error);
+      throw error;
+    }
+  }
+
+  async updateDateTopicAssociation(date: string, topicId: string, isActive: boolean): Promise<void> {
+    try {
+      // Check if association exists
+      const existing = await db.select()
+        .from(assessmentSchedules)
+        .where(
+          and(
+            eq(assessmentSchedules.assessmentDate, date),
+            eq(assessmentSchedules.topicId, topicId)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        // Update existing association
+        await db.update(assessmentSchedules)
+          .set({ isActive })
+          .where(
+            and(
+              eq(assessmentSchedules.assessmentDate, date),
+              eq(assessmentSchedules.topicId, topicId)
+            )
+          );
+      } else if (isActive) {
+        // Create new association only if activating
+        // Get topic name from questions table
+        const topicInfo = await db.select({
+          name: questions.topic
+        })
+        .from(questions)
+        .where(eq(questions.topicId, topicId))
+        .limit(1);
+
+        const topicName = topicInfo.length > 0 ? topicInfo[0].name : topicId;
+
+        await db.insert(assessmentSchedules).values({
+          assessmentDate: date,
+          topicId: topicId,
+          topicName: topicName,
+          isActive: true
+        });
+      }
+    } catch (error) {
+      console.error(`Error updating date-topic association for ${date}-${topicId}:`, error);
+      throw error;
+    }
   }
 }
 
