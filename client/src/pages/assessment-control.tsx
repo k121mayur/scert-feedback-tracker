@@ -3,7 +3,8 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Calendar, BookOpen, Save, ChevronDown, ChevronRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, Calendar, BookOpen, Save, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -27,6 +28,7 @@ export default function AssessmentControl() {
   
   const [assessmentDates, setAssessmentDates] = useState<AssessmentDate[]>([]);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
+  const [searchTerms, setSearchTerms] = useState<{[dateKey: string]: string}>({});
 
   // Load current assessment dates and topics
   useEffect(() => {
@@ -116,6 +118,18 @@ export default function AssessmentControl() {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const getFilteredTopics = (topics: Topic[], searchTerm: string) => {
+    if (!searchTerm) return topics.sort((a, b) => a.id.localeCompare(b.id));
+    
+    const normalizedSearch = searchTerm.toLowerCase();
+    return topics
+      .filter(topic => 
+        topic.id.toLowerCase().includes(normalizedSearch) ||
+        topic.name.toLowerCase().includes(normalizedSearch)
+      )
+      .sort((a, b) => a.id.localeCompare(b.id));
   };
 
   return (
@@ -216,31 +230,83 @@ export default function AssessmentControl() {
                     {expandedDates.has(dateItem.date) && (
                       <div className="ml-6 pl-4 border-l-2 border-muted">
                         <div className="mb-3">
-                          <h4 className="text-sm font-medium text-muted-foreground flex items-center">
+                          <h4 className="text-sm font-medium text-muted-foreground flex items-center mb-2">
                             <BookOpen className="mr-2 h-4 w-4" />
                             Available Topics for this Date
                           </h4>
+                          
+                          {/* Search Box */}
+                          <div className="relative mb-3">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Search topics..."
+                              value={searchTerms[dateItem.date] || ''}
+                              onChange={(e) => setSearchTerms(prev => ({
+                                ...prev,
+                                [dateItem.date]: e.target.value
+                              }))}
+                              className="pl-10 text-sm"
+                            />
+                          </div>
+
+                          {/* Select All/None Buttons */}
+                          <div className="flex gap-2 mb-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const filteredTopics = getFilteredTopics(dateItem.topics, searchTerms[dateItem.date] || '');
+                                filteredTopics.forEach(topic => {
+                                  handleTopicToggle(dateItem.date, topic.id, true);
+                                });
+                              }}
+                              className="text-xs"
+                            >
+                              Select All Visible
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const filteredTopics = getFilteredTopics(dateItem.topics, searchTerms[dateItem.date] || '');
+                                filteredTopics.forEach(topic => {
+                                  handleTopicToggle(dateItem.date, topic.id, false);
+                                });
+                              }}
+                              className="text-xs"
+                            >
+                              Deselect All Visible
+                            </Button>
+                          </div>
                         </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
-                          {dateItem.topics.map((topic) => (
-                            <div key={topic.id} className="flex items-center space-x-2 p-2 border rounded">
+                          {getFilteredTopics(dateItem.topics, searchTerms[dateItem.date] || '').map((topic) => (
+                            <div key={topic.id} className="flex items-start space-x-2 p-3 border rounded hover:bg-muted/50 transition-colors">
                               <Checkbox
                                 id={`topic-${dateItem.date}-${topic.id}`}
                                 checked={topic.isActive}
                                 onCheckedChange={(checked) => 
                                   handleTopicToggle(dateItem.date, topic.id, checked as boolean)
                                 }
+                                className="mt-1"
                               />
                               <label 
                                 htmlFor={`topic-${dateItem.date}-${topic.id}`}
                                 className="flex-1 cursor-pointer text-sm"
                               >
-                                <div className="font-medium line-clamp-2">{topic.name}</div>
-                                <div className="text-xs text-muted-foreground">{topic.id}</div>
+                                <div className="font-medium text-xs mb-1 text-blue-600 dark:text-blue-400 font-mono">{topic.id}</div>
+                                <div className="line-clamp-3 text-sm leading-tight">{topic.name.replace(/^[^:]*:\s*/, '')}</div>
                               </label>
                             </div>
                           ))}
                         </div>
+                        
+                        {getFilteredTopics(dateItem.topics, searchTerms[dateItem.date] || '').length === 0 && (
+                          <div className="text-center py-4 text-muted-foreground text-sm">
+                            No topics found matching "{searchTerms[dateItem.date]}"
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

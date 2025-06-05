@@ -583,7 +583,7 @@ export class DatabaseStorage implements IStorage {
         dateTopics.forEach(topic => {
           topicMap.set(topic.topicId, {
             id: topic.topicId,
-            name: topic.topicName,
+            name: `${topic.topicId}: ${topic.topicName}`,
             isActive: topic.isActive
           });
         });
@@ -592,7 +592,7 @@ export class DatabaseStorage implements IStorage {
         const topics = allTopics.map(topic => {
           return topicMap.get(topic.topicId) || {
             id: topic.topicId,
-            name: topic.topicName || topic.topicId,
+            name: `${topic.topicId}: ${topic.topicName || topic.topicId}`,
             isActive: false
           };
         });
