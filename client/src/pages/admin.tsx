@@ -346,7 +346,7 @@ export default function Admin() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           {/* Admin Tabs */}
           <div className="border-b border-border mb-6">
-            <TabsList className="grid w-full max-w-4xl grid-cols-4">
+            <TabsList className="grid w-full max-w-5xl grid-cols-5">
               <TabsTrigger value="batches" className="flex items-center space-x-2">
                 <Users className="h-4 w-4" />
                 <span>Batch Management</span>
@@ -354,6 +354,10 @@ export default function Admin() {
               <TabsTrigger value="teachers" className="flex items-center space-x-2">
                 <UserSearch className="h-4 w-4" />
                 <span>Teacher Management</span>
+              </TabsTrigger>
+              <TabsTrigger value="import" className="flex items-center space-x-2">
+                <FileText className="h-4 w-4" />
+                <span>Bulk Import</span>
               </TabsTrigger>
               <TabsTrigger value="control" className="flex items-center space-x-2">
                 <Settings className="h-4 w-4" />
@@ -450,6 +454,25 @@ export default function Admin() {
               </Card>
 
 
+            </div>
+          </TabsContent>
+
+          {/* Bulk Import Tab */}
+          <TabsContent value="import">
+            <div className="space-y-6">
+              <BulkTeacherImport />
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <FileText className="mr-2 h-5 w-5" />
+                    Payment ID Verification
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CsvUpload />
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
