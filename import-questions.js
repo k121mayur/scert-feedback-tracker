@@ -1,6 +1,8 @@
-const fs = require('fs');
-const { Pool } = require('@neondatabase/serverless');
+import fs from 'fs';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import ws from 'ws';
 
+neonConfig.webSocketConstructor = ws;
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function importQuestions() {
@@ -89,8 +91,8 @@ async function importQuestions() {
         
         try {
           await pool.query(`
-            INSERT INTO questions (service_type, training_group, topic_id, topic, question, option_a, option_b, option_c, option_d, correct_option, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+            INSERT INTO questions (service_type, training_group, topic_id, topic, question, option_a, option_b, option_c, option_d, correct_option, correct_answer, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10, NOW())
           `, [serviceType, trainingGroup, topicId, topic, question, optionA, optionB, optionC, optionD, correctOption]);
           
           imported++;
