@@ -1,231 +1,247 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Users, Brain, Target } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { BookOpen, Users, Clock, CheckCircle } from 'lucide-react';
 
-interface LoadingIndicatorProps {
-  message?: string;
-  type?: 'default' | 'exam' | 'authentication' | 'submission';
-  progress?: number;
-}
+// Educational loading mascot with animations
+export const TeacherLoadingMascot = ({ message = "तैयारी हो रही है..." }: { message?: string }) => (
+  <div className="flex flex-col items-center justify-center space-y-4 p-8">
+    <motion.div
+      className="relative"
+      animate={{ 
+        scale: [1, 1.1, 1],
+        rotate: [0, 5, -5, 0]
+      }}
+      transition={{ 
+        duration: 2,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+    >
+      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+        <BookOpen className="w-8 h-8 text-blue-600" />
+      </div>
+      <motion.div
+        className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center"
+        animate={{ 
+          scale: [1, 1.3, 1],
+          opacity: [1, 0.7, 1]
+        }}
+        transition={{ 
+          duration: 1.5,
+          repeat: Infinity,
+          delay: 0.5
+        }}
+      >
+        <Users className="w-3 h-3 text-white" />
+      </motion.div>
+    </motion.div>
+    
+    <motion.p
+      className="text-lg font-medium text-gray-700 text-center"
+      animate={{ opacity: [1, 0.6, 1] }}
+      transition={{ duration: 1.5, repeat: Infinity }}
+    >
+      {message}
+    </motion.p>
+    
+    <div className="flex space-x-1">
+      {[0, 1, 2].map((i) => (
+        <motion.div
+          key={i}
+          className="w-2 h-2 bg-blue-500 rounded-full"
+          animate={{ 
+            y: [0, -10, 0],
+            opacity: [0.5, 1, 0.5]
+          }}
+          transition={{
+            duration: 1,
+            repeat: Infinity,
+            delay: i * 0.2
+          }}
+        />
+      ))}
+    </div>
+  </div>
+);
 
-export function LoadingIndicator({ 
-  message = "Loading...", 
-  type = 'default',
-  progress 
-}: LoadingIndicatorProps) {
-  const [currentTip, setCurrentTip] = useState(0);
-  
-  const educationalTips = [
-    "Did you know? Regular practice improves retention by 40%",
-    "Tip: Take short breaks between questions to stay focused",
-    "Remember: There's no penalty for reviewing your answers",
-    "Success tip: Read each question carefully before answering"
-  ];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTip((prev) => (prev + 1) % educationalTips.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const getIcon = () => {
-    switch (type) {
-      case 'exam':
-        return Brain;
-      case 'authentication':
-        return Users;
-      case 'submission':
-        return Target;
-      default:
-        return BookOpen;
+// Smart loading indicator that adapts to system load
+export const AdaptiveLoadingIndicator = ({ 
+  systemLoad = 'normal',
+  estimatedTime,
+  currentStep
+}: {
+  systemLoad?: 'low' | 'normal' | 'high' | 'peak';
+  estimatedTime?: number;
+  currentStep?: string;
+}) => {
+  const getLoadColor = () => {
+    switch (systemLoad) {
+      case 'low': return 'text-green-600 bg-green-100';
+      case 'normal': return 'text-blue-600 bg-blue-100';
+      case 'high': return 'text-orange-600 bg-orange-100';
+      case 'peak': return 'text-red-600 bg-red-100';
+      default: return 'text-blue-600 bg-blue-100';
     }
   };
 
-  const Icon = getIcon();
+  const getLoadMessage = () => {
+    switch (systemLoad) {
+      case 'low': return 'तुरंत शुरू हो रहा है';
+      case 'normal': return 'सामान्य गति से लोड हो रहा है';
+      case 'high': return 'व्यस्त समय - कृपया प्रतीक्षा करें';
+      case 'peak': return 'चरम व्यस्तता - थोड़ा समय लगेगा';
+      default: return 'लोड हो रहा है...';
+    }
+  };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[200px] space-y-6">
-      {/* Educational Mascot Animation */}
+    <div className="flex flex-col items-center space-y-6 p-6">
       <motion.div
+        className={`w-20 h-20 rounded-full flex items-center justify-center ${getLoadColor()}`}
         animate={{ 
-          rotate: [0, 10, -10, 0],
-          scale: [1, 1.1, 1]
+          scale: [1, 1.2, 1],
+          rotate: systemLoad === 'peak' ? [0, 360] : [0, 180, 0]
         }}
         transition={{ 
-          duration: 2, 
+          duration: systemLoad === 'peak' ? 3 : 2,
           repeat: Infinity,
           ease: "easeInOut"
         }}
-        className="relative"
       >
-        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
-          <Icon className="w-10 h-10 text-white" />
-        </div>
-        
-        {/* Floating particles */}
-        {[...Array(3)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-2 h-2 bg-blue-400 rounded-full"
-            animate={{
-              x: [0, 20, -20, 0],
-              y: [0, -20, 20, 0],
-              opacity: [0, 1, 0]
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              delay: i * 0.5,
-              ease: "easeInOut"
-            }}
-            style={{
-              left: `${50 + (i - 1) * 30}%`,
-              top: `${50 + (i - 1) * 20}%`
-            }}
-          />
-        ))}
+        <Clock className="w-10 h-10" />
       </motion.div>
 
-      {/* Progress Bar */}
-      {progress !== undefined && (
-        <div className="w-64 bg-gray-200 rounded-full h-2">
-          <motion.div
-            className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.3 }}
-          />
-        </div>
-      )}
+      <div className="text-center space-y-2">
+        <p className="text-lg font-medium text-gray-800">{getLoadMessage()}</p>
+        {currentStep && (
+          <p className="text-sm text-gray-600">{currentStep}</p>
+        )}
+        {estimatedTime && (
+          <p className="text-sm text-gray-500">
+            अनुमानित समय: {estimatedTime} सेकंड
+          </p>
+        )}
+      </div>
 
-      {/* Loading Message */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center space-y-3"
-      >
-        <h3 className="text-lg font-semibold text-gray-800">{message}</h3>
-        
-        {/* Educational Tips Carousel */}
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={currentTip}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.5 }}
-            className="text-sm text-gray-600 max-w-md mx-auto"
-          >
-            {educationalTips[currentTip]}
-          </motion.p>
-        </AnimatePresence>
-      </motion.div>
-
-      {/* Pulsing dots */}
-      <div className="flex space-x-2">
-        {[...Array(3)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="w-3 h-3 bg-blue-500 rounded-full"
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{
-              duration: 1,
-              repeat: Infinity,
-              delay: i * 0.2
-            }}
-          />
-        ))}
+      {/* Progress indicator */}
+      <div className="w-48 h-2 bg-gray-200 rounded-full overflow-hidden">
+        <motion.div
+          className={`h-full ${systemLoad === 'peak' ? 'bg-red-500' : 'bg-blue-500'}`}
+          animate={{ 
+            x: ['-100%', '100%'],
+            opacity: [0.5, 1, 0.5]
+          }}
+          transition={{ 
+            duration: systemLoad === 'peak' ? 4 : 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
       </div>
     </div>
   );
-}
+};
 
-// High-load scenario loading component
-export function HighLoadIndicator({ queuePosition }: { queuePosition?: number }) {
+// Micro-animations for successful operations
+export const SuccessAnimation = ({ message = "सफल!" }: { message?: string }) => (
+  <motion.div
+    className="flex flex-col items-center space-y-4"
+    initial={{ scale: 0, opacity: 0 }}
+    animate={{ scale: 1, opacity: 1 }}
+    transition={{ type: "spring", duration: 0.6 }}
+  >
+    <motion.div
+      className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center"
+      animate={{ 
+        scale: [1, 1.2, 1],
+        rotate: [0, 360]
+      }}
+      transition={{ 
+        duration: 0.8,
+        ease: "easeOut"
+      }}
+    >
+      <CheckCircle className="w-8 h-8 text-green-600" />
+    </motion.div>
+    
+    <motion.p
+      className="text-lg font-medium text-green-700"
+      initial={{ y: 20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ delay: 0.3 }}
+    >
+      {message}
+    </motion.p>
+  </motion.div>
+);
+
+// Connection status indicator
+export const ConnectionStatusIndicator = ({ 
+  status = 'connected',
+  serverLoad = 'normal'
+}: {
+  status?: 'connected' | 'reconnecting' | 'disconnected';
+  serverLoad?: 'normal' | 'high' | 'overloaded';
+}) => {
+  const getStatusConfig = () => {
+    switch (status) {
+      case 'connected':
+        return {
+          color: 'bg-green-500',
+          message: 'जुड़ा हुआ',
+          icon: '●'
+        };
+      case 'reconnecting':
+        return {
+          color: 'bg-yellow-500',
+          message: 'पुनः जुड़ रहा है',
+          icon: '◐'
+        };
+      case 'disconnected':
+        return {
+          color: 'bg-red-500',
+          message: 'जुड़ाव टूटा',
+          icon: '○'
+        };
+      default:
+        return {
+          color: 'bg-gray-500',
+          message: 'अज्ञात',
+          icon: '?'
+        };
+    }
+  };
+
+  const statusConfig = getStatusConfig();
+
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+    <motion.div
+      className="flex items-center space-x-2 px-3 py-1 rounded-full bg-white shadow-sm border"
+      animate={{ 
+        scale: status === 'reconnecting' ? [1, 1.05, 1] : 1
+      }}
+      transition={{ 
+        duration: 1,
+        repeat: status === 'reconnecting' ? Infinity : 0
+      }}
+    >
       <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-        className="w-12 h-12 mx-auto mb-4"
-      >
-        <div className="w-full h-full border-4 border-blue-200 border-t-blue-600 rounded-full" />
-      </motion.div>
-      
-      <h3 className="text-lg font-semibold text-blue-800 mb-2">
-        High Traffic Detected
-      </h3>
-      
-      <p className="text-blue-700 mb-3">
-        We're processing a large number of requests. Your session is secure and will be handled shortly.
-      </p>
-      
-      {queuePosition && (
-        <div className="bg-white rounded-md p-3 border border-blue-200">
-          <p className="text-sm text-blue-600">
-            Position in queue: <span className="font-bold">{queuePosition}</span>
-          </p>
-          <p className="text-xs text-blue-500 mt-1">
-            Estimated wait time: {Math.ceil(queuePosition / 100)} minutes
-          </p>
-        </div>
+        className={`w-2 h-2 rounded-full ${statusConfig.color}`}
+        animate={{
+          opacity: status === 'reconnecting' ? [1, 0.3, 1] : 1
+        }}
+        transition={{
+          duration: 1,
+          repeat: status === 'reconnecting' ? Infinity : 0
+        }}
+      />
+      <span className="text-xs font-medium text-gray-700">
+        {statusConfig.message}
+      </span>
+      {serverLoad === 'high' && (
+        <span className="text-xs text-orange-600 font-medium">
+          व्यस्त
+        </span>
       )}
-    </div>
+    </motion.div>
   );
-}
-
-// Submission processing indicator
-export function SubmissionIndicator({ stage }: { stage: 'uploading' | 'processing' | 'saving' | 'complete' }) {
-  const stages = [
-    { key: 'uploading', label: 'Uploading answers', icon: '📤' },
-    { key: 'processing', label: 'Processing responses', icon: '⚙️' },
-    { key: 'saving', label: 'Saving to database', icon: '💾' },
-    { key: 'complete', label: 'Complete!', icon: '✅' }
-  ];
-
-  const currentStageIndex = stages.findIndex(s => s.key === stage);
-
-  return (
-    <div className="space-y-4">
-      {stages.map((stageItem, index) => (
-        <motion.div
-          key={stageItem.key}
-          className={`flex items-center space-x-3 p-3 rounded-lg ${
-            index <= currentStageIndex 
-              ? 'bg-green-50 border border-green-200' 
-              : 'bg-gray-50 border border-gray-200'
-          }`}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: index * 0.1 }}
-        >
-          <div className="text-2xl">{stageItem.icon}</div>
-          <div className="flex-1">
-            <p className={`font-medium ${
-              index <= currentStageIndex ? 'text-green-800' : 'text-gray-600'
-            }`}>
-              {stageItem.label}
-            </p>
-          </div>
-          {index < currentStageIndex && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center"
-            >
-              <span className="text-white text-sm">✓</span>
-            </motion.div>
-          )}
-          {index === currentStageIndex && (
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full"
-            />
-          )}
-        </motion.div>
-      ))}
-    </div>
-  );
-}
+};
