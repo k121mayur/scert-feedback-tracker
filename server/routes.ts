@@ -913,6 +913,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Database performance monitoring endpoints for 40K users
+  app.get("/api/admin/performance/connections", async (req: Request, res: Response) => {
+    try {
+      const { getConnectionStats } = await import("./db");
+      const stats = await getConnectionStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Connection stats error:", error);
+      res.status(500).json({ error: "Failed to get connection stats" });
+    }
+  });
+
+  app.get("/api/admin/performance/queries", async (req: Request, res: Response) => {
+    try {
+      const { analyzeQueryPerformance } = await import("./db");
+      const queries = await analyzeQueryPerformance();
+      res.json(queries);
+    } catch (error) {
+      console.error("Query performance error:", error);
+      res.status(500).json({ error: "Failed to analyze query performance" });
+    }
+  });
+
+  app.get("/api/admin/performance/indexes", async (req: Request, res: Response) => {
+    try {
+      const { getIndexUsageStats } = await import("./db");
+      const indexes = await getIndexUsageStats();
+      res.json(indexes);
+    } catch (error) {
+      console.error("Index stats error:", error);
+      res.status(500).json({ error: "Failed to get index usage stats" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
