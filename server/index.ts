@@ -9,10 +9,18 @@ import {
   healthCheckEndpoint,
   setupGracefulShutdown 
 } from "./deployment-optimizations";
+import {
+  globalRateLimiter,
+  ddosProtection,
+  fairResourceAllocation
+} from "./rate-limiting";
 
 const app = express();
 
-// Production deployment middleware stack
+// Production deployment middleware stack with enhanced rate limiting
+app.use(ddosProtection);
+app.use(fairResourceAllocation);
+app.use(globalRateLimiter.middleware());
 app.use(connectionPoolingMiddleware);
 app.use(memoryManagementMiddleware);
 app.use(deploymentRateLimiter);
