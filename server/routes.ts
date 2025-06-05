@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { hybridQueue } from "./queue-fallback";
 import { dataReconciliation } from "./data-reconciliation";
+import { productionImporter } from "./import-service";
 import { z } from "zod";
 import multer from "multer";
 import { parse } from "csv-parse";
@@ -827,6 +828,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error getting reconciliation status:", error);
       res.status(500).json({ error: "Failed to get reconciliation status" });
+    }
+  });
+
+  // Production data import endpoint
+  app.post("/api/admin/import-production-data", async (req: Request, res: Response) => {
+    try {
+      console.log("Starting production data import...");
+      await productionImporter.importCompleteDataset('./attached_assets/batch_teachers_1749097105409.csv');
+      
+      // Clear caches after import
+      cache.flushAll();
+      assessmentCache.flushAll();
+      
+      res.json({ 
+        success: true, 
+        message: "Production data imported successfully",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error importing production data:", error);
+      res.status(500).json({ error: "Failed to import production data" });
     }
   });
 
