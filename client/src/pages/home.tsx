@@ -78,50 +78,7 @@ export default function Home() {
 
 
 
-            {/* Demo Testing Information Section */}
-            <section className="mb-12">
-              <Card className="max-w-2xl mx-auto">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center">
-                    <Info className="mr-2 h-5 w-5" />
-                    Demo Testing Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Use these mobile numbers to test the assessment system:
-                    </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      <div className="p-3 bg-muted rounded-lg text-center">
-                        <div className="font-mono text-sm font-semibold">9876543210</div>
-                        <div className="text-xs text-muted-foreground">Mumbai</div>
-                      </div>
-                      <div className="p-3 bg-muted rounded-lg text-center">
-                        <div className="font-mono text-sm font-semibold">9876543211</div>
-                        <div className="text-xs text-muted-foreground">Pune</div>
-                      </div>
-                      <div className="p-3 bg-muted rounded-lg text-center">
-                        <div className="font-mono text-sm font-semibold">9876543212</div>
-                        <div className="text-xs text-muted-foreground">Nashik</div>
-                      </div>
-                      <div className="p-3 bg-muted rounded-lg text-center">
-                        <div className="font-mono text-sm font-semibold">9876543213</div>
-                        <div className="text-xs text-muted-foreground">Nagpur</div>
-                      </div>
-                      <div className="p-3 bg-muted rounded-lg text-center">
-                        <div className="font-mono text-sm font-semibold">9876543214</div>
-                        <div className="text-xs text-muted-foreground">Aurangabad</div>
-                      </div>
-                      <div className="p-3 bg-muted rounded-lg text-center">
-                        <div className="font-mono text-sm font-semibold">9876543215</div>
-                        <div className="text-xs text-muted-foreground">Kolhapur</div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
+
           </TabsContent>
 
           <TabsContent value="admin">

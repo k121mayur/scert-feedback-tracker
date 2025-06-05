@@ -526,16 +526,7 @@ export default function Admin() {
                       {loading ? "Searching..." : "Search Teacher"}
                     </Button>
                     
-                    <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-                      <h4 className="font-medium mb-2">Sample Teacher Mobile Numbers:</h4>
-                      <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                        <div>Mumbai: 9876543201</div>
-                        <div>Pune: 9876543226</div>
-                        <div>Nashik: 9876543251</div>
-                        <div>Nagpur: 9876543276</div>
-                        <div>Aurangabad: 9876543301</div>
-                      </div>
-                    </div>
+  
                   </div>
                 </CardContent>
               </Card>
