@@ -464,13 +464,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { dates } = datesSchema.parse(req.body);
       
-      // Update each date's status and topic associations
+      // Update each date's status and topic associations with batch processing
       for (const dateItem of dates) {
         await storage.updateAssessmentDateStatus(dateItem.date, dateItem.isActive);
         
-        // Update topic associations for this date
-        for (const topic of dateItem.topics) {
-          await storage.updateDateTopicAssociation(dateItem.date, topic.id, topic.isActive);
+        // Process topics in smaller batches to avoid connection timeouts
+        const batchSize = 10;
+        const topics = dateItem.topics;
+        
+        for (let i = 0; i < topics.length; i += batchSize) {
+          const batch = topics.slice(i, i + batchSize);
+          
+          // Process batch with delay to prevent overwhelming the database
+          const batchPromises = batch.map(async (topic, index) => {
+            // Small delay between operations
+            if (index > 0) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            return storage.updateDateTopicAssociation(dateItem.date, topic.id, topic.isActive);
+          });
+          
+          await Promise.all(batchPromises);
+          console.log(`Processed batch ${Math.floor(i/batchSize) + 1} for date ${dateItem.date}`);
         }
       }
 

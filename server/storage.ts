@@ -656,50 +656,66 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateDateTopicAssociation(date: string, topicId: string, isActive: boolean): Promise<void> {
-    try {
-      // Check if association exists
-      const existing = await db.select()
-        .from(assessmentSchedules)
-        .where(
-          and(
-            eq(assessmentSchedules.assessmentDate, date),
-            eq(assessmentSchedules.topicId, topicId)
-          )
-        )
-        .limit(1);
-
-      if (existing.length > 0) {
-        // Update existing association
-        await db.update(assessmentSchedules)
-          .set({ isActive })
+    const maxRetries = 3;
+    let attempt = 0;
+    
+    while (attempt < maxRetries) {
+      try {
+        // Check if association exists
+        const existing = await db.select()
+          .from(assessmentSchedules)
           .where(
             and(
               eq(assessmentSchedules.assessmentDate, date),
               eq(assessmentSchedules.topicId, topicId)
             )
-          );
-      } else if (isActive) {
-        // Create new association only if activating
-        // Get topic name from questions table
-        const topicInfo = await db.select({
-          name: questions.topic
-        })
-        .from(questions)
-        .where(eq(questions.topicId, topicId))
-        .limit(1);
+          )
+          .limit(1);
 
-        const topicName = topicInfo.length > 0 ? topicInfo[0].name : topicId;
+        if (existing.length > 0) {
+          // Update existing association
+          await db.update(assessmentSchedules)
+            .set({ isActive })
+            .where(
+              and(
+                eq(assessmentSchedules.assessmentDate, date),
+                eq(assessmentSchedules.topicId, topicId)
+              )
+            );
+        } else if (isActive) {
+          // Create new association only if activating
+          // Get topic name from questions table
+          const topicInfo = await db.select({
+            name: questions.topic
+          })
+          .from(questions)
+          .where(eq(questions.topicId, topicId))
+          .limit(1);
 
-        await db.insert(assessmentSchedules).values({
-          assessmentDate: date,
-          topicId: topicId,
-          topicName: topicName,
-          isActive: true
-        });
+          const topicName = topicInfo.length > 0 ? topicInfo[0].name : topicId;
+
+          await db.insert(assessmentSchedules).values({
+            assessmentDate: date,
+            topicId: topicId,
+            topicName: topicName,
+            isActive: true
+          });
+        }
+        
+        console.log(`Date-Topic association updated: ${date} - ${topicId} -> ${isActive}`);
+        return; // Success, exit retry loop
+        
+      } catch (error) {
+        attempt++;
+        console.error(`Attempt ${attempt} failed for ${date}-${topicId}:`, error);
+        
+        if (attempt >= maxRetries) {
+          throw new Error(`Failed to update topic association after ${maxRetries} attempts`);
+        }
+        
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
       }
-    } catch (error) {
-      console.error(`Error updating date-topic association for ${date}-${topicId}:`, error);
-      throw error;
     }
   }
 }
