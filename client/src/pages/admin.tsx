@@ -43,12 +43,59 @@ interface FeedbackStats {
 }
 
 export default function Admin() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+  const [loginLoading, setLoginLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("batches");
   const [, setLocation] = useLocation();
   const [mobile, setMobile] = useState("");
   const [teacherInfo, setTeacherInfo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  // Check for existing authentication on component mount
+  useEffect(() => {
+    const authToken = sessionStorage.getItem('adminAuth');
+    if (authToken) {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginLoading(true);
+
+    try {
+      const response = await apiRequest('POST', '/api/admin/login', loginForm);
+      
+      if (response.success) {
+        sessionStorage.setItem('adminAuth', 'authenticated');
+        setIsAuthenticated(true);
+        toast({
+          title: "Login Successful",
+          description: "Welcome to the administration panel.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid username or password.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('adminAuth');
+    setIsAuthenticated(false);
+    setLoginForm({ username: "", password: "" });
+    toast({
+      title: "Logged Out",
+      description: "You have been logged out successfully.",
+    });
+  };
 
   // Assessment Control state
   const [assessmentLoading, setAssessmentLoading] = useState(false);
@@ -317,6 +364,66 @@ export default function Admin() {
     );
   };
 
+  // Login UI component
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <Shield className="h-12 w-12 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">Admin Login</CardTitle>
+            <p className="text-muted-foreground">Enter your credentials to access the administration panel</p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="username" className="text-sm font-medium">Username</label>
+                <Input
+                  id="username"
+                  type="text"
+                  value={loginForm.username}
+                  onChange={(e) => setLoginForm(prev => ({ ...prev, username: e.target.value }))}
+                  placeholder="Enter username"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium">Password</label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="Enter password"
+                  required
+                />
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setLocation('/')}
+                  className="flex-1"
+                >
+                  Back to Home
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loginLoading}
+                  className="flex-1"
+                >
+                  {loginLoading ? "Logging in..." : "Login"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Admin Header */}
@@ -337,6 +444,14 @@ export default function Admin() {
                 <p className="text-muted-foreground mt-1">Manage batches, teachers, and system data</p>
               </div>
             </div>
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              className="flex items-center space-x-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Logout</span>
+            </Button>
           </div>
         </div>
       </header>

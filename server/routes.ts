@@ -409,6 +409,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin authentication
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      // Simple admin credentials - in production, use proper authentication
+      if (username === "admin" && password === "admin123") {
+        res.json({ success: true, message: "Login successful" });
+      } else {
+        res.status(401).json({ success: false, message: "Invalid credentials" });
+      }
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  });
+
   // Admin: Create new teacher
   app.post("/api/admin/teachers", async (req, res) => {
     try {
