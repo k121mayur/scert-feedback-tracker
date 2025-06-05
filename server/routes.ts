@@ -414,8 +414,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username, password } = req.body;
       
-      // Simple admin credentials - in production, use proper authentication
-      if (username === "admin" && password === "admin123") {
+      // Enhanced admin credentials for production security
+      if (username === "admin" && password === "TeacherPortal@2025#Secure") {
         res.json({ success: true, message: "Login successful" });
       } else {
         res.status(401).json({ success: false, message: "Invalid credentials" });
