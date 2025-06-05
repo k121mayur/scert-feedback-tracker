@@ -15,6 +15,7 @@ import {
   fairResourceAllocation
 } from "./rate-limiting";
 import { queueProcessor } from "./queue-processor";
+import { connectionOptimizer } from "./connection-optimizer";
 
 const app = express();
 
@@ -29,10 +30,22 @@ app.use(deploymentRateLimiter);
 // High-performance middleware setup for 40k concurrent users
 setupPerformanceMiddleware(app);
 
-// Socket optimization for load testing
+// Socket optimization and connection tracking for load testing
 app.use((req, res, next) => {
+  const connectionId = `${req.ip}-${Date.now()}-${Math.random()}`;
+  connectionOptimizer.trackConnectionStart(connectionId);
+  
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('Keep-Alive', 'timeout=120, max=1000');
+  
+  res.on('finish', () => {
+    connectionOptimizer.trackConnectionEnd(connectionId, res.statusCode < 400);
+  });
+  
+  res.on('error', () => {
+    connectionOptimizer.trackConnectionEnd(connectionId, false);
+  });
+  
   next();
 });
 
@@ -50,8 +63,17 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+// Optimized payload limits for load testing
+app.use(express.json({ 
+  limit: '100kb', // Reduced payload size to prevent memory bloat
+  strict: true,
+  type: 'application/json'
+}));
+app.use(express.urlencoded({ 
+  extended: false, 
+  limit: '100kb',
+  parameterLimit: 20 // Limit URL parameters
+}));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -127,6 +149,16 @@ app.use((req, res, next) => {
     
     // Start queue processor for exam submissions
     queueProcessor.startProcessing();
+    
+    // Start connection optimization monitoring
+    connectionOptimizer.on('metrics', (metrics) => {
+      if (metrics.connectionErrors > 50) {
+        log(`High connection errors detected: ${metrics.connectionErrors}`);
+      }
+      if (metrics.averageResponseTime > 2000) {
+        log(`High response times detected: ${metrics.averageResponseTime}ms`);
+      }
+    });
     
     // Setup graceful shutdown
     setupGracefulShutdown(server);

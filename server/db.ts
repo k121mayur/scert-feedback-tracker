@@ -13,20 +13,20 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Optimized connection pool for extreme scale (8000 max connections)
+// Ultra-optimized connection pool for load testing
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 8000, // Maximum connections for extreme scale deployment
-  min: 100,  // Higher minimum pool for immediate availability
-  idleTimeoutMillis: 15000, // Faster idle timeout for connection recycling
-  connectionTimeoutMillis: 3000, // Quick timeout for rapid failover
-  allowExitOnIdle: true,
-  maxUses: 15000, // Extended connection lifecycle for efficiency
+  max: 500, // Reduced from 8000 - too many connections can cause resource contention
+  min: 50,  // Lower minimum for better resource management
+  idleTimeoutMillis: 30000, // Longer idle timeout to avoid connection churn
+  connectionTimeoutMillis: 10000, // Increased timeout to prevent premature failures
+  allowExitOnIdle: false, // Keep pool alive for consistent performance
+  maxUses: 1000, // Moderate connection reuse to prevent memory leaks
   keepAlive: true,
-  // Query timeout optimizations for extreme concurrency
-  statement_timeout: 8000, // 8 second query timeout
-  query_timeout: 6000, // 6 second individual query timeout
-  application_name: 'maharashtra_teacher_assessment_8k_pool',
+  // Optimized timeouts for load testing
+  statement_timeout: 30000, // 30 second query timeout
+  query_timeout: 25000, // 25 second individual query timeout
+  application_name: 'nipun_teachers_portal_load_test',
 });
 
 export const db = drizzle({ client: pool, schema });
