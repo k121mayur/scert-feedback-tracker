@@ -29,6 +29,13 @@ app.use(deploymentRateLimiter);
 // High-performance middleware setup for 40k concurrent users
 setupPerformanceMiddleware(app);
 
+// Socket optimization for load testing
+app.use((req, res, next) => {
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Keep-Alive', 'timeout=120, max=1000');
+  next();
+});
+
 // Health check endpoint for load balancers
 app.get('/health', healthCheckEndpoint);
 
@@ -101,17 +108,17 @@ app.use((req, res, next) => {
   // It is the only port that is not firewalled.
   const port = 5000;
   
-  // Production server optimizations for high load
-  server.keepAliveTimeout = 65000;
-  server.headersTimeout = 66000;
-  server.maxConnections = 1000;
-  server.timeout = 30000;
+  // Production server optimizations for high load and load testing
+  server.keepAliveTimeout = 120000; // Increased to 2 minutes
+  server.headersTimeout = 125000; // Slightly higher than keepAlive
+  server.maxConnections = 10000; // Increased from 1000 to 10000 for load testing
+  server.timeout = 60000; // Increased to 1 minute
   
   server.listen({
     port,
     host: "0.0.0.0",
     reusePort: true,
-    backlog: 511, // Queue for pending connections
+    backlog: 2048, // Increased backlog for high load testing
   }, () => {
     log(`serving on port ${port} with production optimizations`);
     
@@ -127,7 +134,7 @@ app.use((req, res, next) => {
     // Log server configuration
     log(`Max connections: ${server.maxConnections}`);
     log(`Keep-alive timeout: ${server.keepAliveTimeout}ms`);
-    log(`Connection backlog: 511`);
+    log(`Connection backlog: 2048`);
     log(`Queue processor started`);
     log(`Production deployment ready`);
   });
