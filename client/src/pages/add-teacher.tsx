@@ -19,10 +19,26 @@ export default function AddTeacher() {
     teacherName: "",
     mobile: "",
     payId: "",
-    district: ""
+    district: "",
+    serviceType: "",
+    trainingGroup: ""
   });
 
-  const districts = ["Mumbai", "Pune", "Nashik", "Nagpur", "Aurangabad"];
+  const districts = [
+    "Ahmednagar", "Akola", "Amravati", "Beed", "Bhandara", "Buldhana", 
+    "Chandrapur", "Chhatrapati Sambhajinagar", "Dharashiv", "Dhule", 
+    "Gadchiroli", "Gondia", "Hingoli", "Jalgaon", "Jalna", "Kolhapur", 
+    "Latur", "Mumbai", "Nagpur", "Nanded", "Nandurbar", "Nashik", 
+    "Palghar", "Parbhani", "Pune", "Raigarh", "Ratnagiri", "Sangli", 
+    "Satara", "Sindhudurg", "Solapur", "Thane", "Wardha", "Washim", "Yavatmal"
+  ];
+
+  const serviceTypes = ["Selection Grade", "Senior Grade"];
+  
+  const trainingGroups = [
+    "Arts Sports", "Higher Secondary", "Primary", "Secondary", 
+    "Secondary & Higher Secondary", "Teacher Training Institute"
+  ];
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -53,7 +69,7 @@ export default function AddTeacher() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.teacherName || !formData.mobile || !formData.district) {
+    if (!formData.teacherName || !formData.mobile || !formData.district || !formData.serviceType || !formData.trainingGroup) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -165,6 +181,38 @@ export default function AddTeacher() {
                       {districts.map((district) => (
                         <SelectItem key={district} value={district}>
                           {district}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="serviceType">Service Type *</Label>
+                  <Select onValueChange={(value) => handleInputChange('serviceType', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select service type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {serviceTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="trainingGroup">Training Group *</Label>
+                  <Select onValueChange={(value) => handleInputChange('trainingGroup', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select training group" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {trainingGroups.map((group) => (
+                        <SelectItem key={group} value={group}>
+                          {group}
                         </SelectItem>
                       ))}
                     </SelectContent>
