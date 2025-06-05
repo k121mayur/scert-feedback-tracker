@@ -93,7 +93,7 @@ class QueueProcessor {
             topicId: examData.topic_id,
             question: questions[i].question,
             selectedAnswer: examData.answers[i],
-            correctAnswer: correctAnswers[i],
+            correctAnswer: correctAnswers[i] || 'A', // Ensure non-null value
             isCorrect: examData.answers[i] === correctAnswers[i]
           });
         }

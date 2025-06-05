@@ -278,14 +278,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         // Save individual answers
+        const answerData = [];
         for (let i = 0; i < data.answers.length && i < questions.length; i++) {
-          await storage.addExamAnswer({
-            examResultId: examResult.id,
-            questionId: questions[i].id,
+          answerData.push({
+            mobile: data.mobile,
+            topicId: data.topic_id,
+            question: questions[i].question,
             selectedAnswer: data.answers[i],
-            correctAnswer: correctAnswers[i],
+            correctAnswer: correctAnswers[i] || 'A', // Ensure non-null value
             isCorrect: data.answers[i] === correctAnswers[i]
           });
+        }
+        
+        if (answerData.length > 0) {
+          await storage.submitExamAnswers(answerData);
         }
 
         // Return immediate success with results

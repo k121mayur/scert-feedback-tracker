@@ -57,6 +57,7 @@ export const getCacheKey = {
   teacherStats: (mobile: string) => `ts:${mobile}`,
   batchTeachers: (batchName: string) => `bt:${batchName}`,
   systemStats: () => 'ss',
+  examAnswers: (mobile: string, topicId: string) => `ea:${mobile}:${topicId}`,
 };
 
 // Cache statistics for monitoring

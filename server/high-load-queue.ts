@@ -1,243 +1,259 @@
-import { EventEmitter } from 'events';
-import { InsertExamAnswer, InsertTrainerFeedback, InsertExamResult } from '@shared/schema';
+import { redisClient } from './redis-alternative';
 import { storage } from './storage';
 
-interface QueueItem {
-  id: string;
-  type: 'exam_submission' | 'feedback_submission' | 'exam_answers';
-  data: any;
+interface ExamSubmission {
+  examId: string;
+  mobile: string;
+  topic_id: string;
+  topic_name: string;
+  assessment_date: string;
+  batch_name: string;
+  district: string;
+  questions: string[];
+  answers: string[];
   timestamp: number;
-  retryCount: number;
   priority: 'high' | 'normal' | 'low';
 }
 
-interface BatchProcessingStats {
-  processed: number;
+interface QueueMetrics {
+  totalQueued: number;
+  processing: number;
+  completed: number;
   failed: number;
-  queued: number;
-  avgProcessingTime: number;
+  averageProcessingTime: number;
+  currentLoad: number;
 }
 
-class HighLoadSubmissionQueue extends EventEmitter {
-  private queue: QueueItem[] = [];
-  private processing = false;
-  private maxWorkers = 20; // Increased for 30K concurrent users
-  private activeWorkers = 0;
-  private maxRetries = 3;
-  private batchSize = 50; // Process in larger batches
-  private processingStats: BatchProcessingStats = {
-    processed: 0,
+export class HighLoadQueueManager {
+  private processingItems = new Set<string>();
+  private metrics: QueueMetrics = {
+    totalQueued: 0,
+    processing: 0,
+    completed: 0,
     failed: 0,
-    queued: 0,
-    avgProcessingTime: 0
+    averageProcessingTime: 0,
+    currentLoad: 0
   };
+  private processingTimes: number[] = [];
+  private maxConcurrentProcessing = 100; // For 40K concurrent users
+  private batchSize = 50;
 
-  constructor() {
-    super();
-    this.startProcessing();
-  }
-
-  // Enqueue exam result submission
-  enqueueExamSubmission(examResult: InsertExamResult, examAnswers: InsertExamAnswer[]): string {
-    const id = `exam_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  async shouldUseQueue(currentLoad: number): Promise<boolean> {
+    // Use immediate processing for low load, queue for high load
+    const concurrentExams = this.processingItems.size;
+    const memoryUsage = process.memoryUsage().heapUsed / 1024 / 1024; // MB
     
-    const queueItem: QueueItem = {
-      id,
-      type: 'exam_submission',
-      data: { examResult, examAnswers },
-      timestamp: Date.now(),
-      retryCount: 0,
-      priority: 'high' // Exam submissions are high priority
-    };
+    // Queue if we have high concurrent load or memory pressure
+    return concurrentExams > 10 || memoryUsage > 200 || currentLoad > 0.7;
+  }
 
-    this.queue.push(queueItem);
-    this.processingStats.queued++;
-    this.emit('enqueued', { id, type: 'exam_submission' });
+  async addToQueue(examData: ExamSubmission): Promise<string> {
+    const queueKey = `exam_queue:${examData.priority}`;
+    await redisClient.lpush(queueKey, JSON.stringify(examData));
     
-    return id;
-  }
-
-  // Enqueue feedback submission
-  enqueueFeedbackSubmission(feedback: InsertTrainerFeedback[]): string {
-    const id = `feedback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Set processing status
+    await redisClient.set(`exam_status_${examData.examId}`, 'queued', { EX: 3600 });
     
-    const queueItem: QueueItem = {
-      id,
-      type: 'feedback_submission',
-      data: { feedback },
-      timestamp: Date.now(),
-      retryCount: 0,
-      priority: 'normal'
-    };
-
-    this.queue.push(queueItem);
-    this.processingStats.queued++;
-    this.emit('enqueued', { id, type: 'feedback_submission' });
-    
-    return id;
+    this.metrics.totalQueued++;
+    return examData.examId;
   }
 
-  private startProcessing() {
-    if (this.processing) return;
-    this.processing = true;
-
-    // Process items every 100ms for high throughput
-    setInterval(() => {
-      this.processQueue();
-    }, 100);
-  }
-
-  private async processQueue() {
-    if (this.activeWorkers >= this.maxWorkers || this.queue.length === 0) {
-      return;
-    }
-
-    // Sort queue by priority and timestamp
-    this.queue.sort((a, b) => {
-      if (a.priority !== b.priority) {
-        const priorityOrder = { high: 0, normal: 1, low: 2 };
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
-      }
-      return a.timestamp - b.timestamp;
-    });
-
-    // Process in batches for efficiency
-    const batch = this.queue.splice(0, Math.min(this.batchSize, this.queue.length));
-    if (batch.length === 0) return;
-
-    this.activeWorkers++;
-    this.processBatch(batch).finally(() => {
-      this.activeWorkers--;
-    });
-  }
-
-  private async processBatch(batch: QueueItem[]) {
+  async processImmediately(examData: ExamSubmission): Promise<any> {
     const startTime = Date.now();
-    const results = await Promise.allSettled(
-      batch.map(item => this.processItem(item))
-    );
+    this.processingItems.add(examData.examId);
+    this.metrics.processing++;
 
-    let processed = 0;
-    let failed = 0;
-
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
-        processed++;
-        this.emit('processed', { id: batch[index].id, success: true });
-      } else {
-        failed++;
-        const item = batch[index];
-        
-        if (item.retryCount < this.maxRetries) {
-          item.retryCount++;
-          item.timestamp = Date.now() + (item.retryCount * 5000); // Exponential backoff
-          this.queue.push(item); // Re-queue for retry
-        } else {
-          this.emit('failed', { id: item.id, error: result.reason });
-        }
-      }
-    });
-
-    // Update statistics
-    const processingTime = Date.now() - startTime;
-    this.processingStats.processed += processed;
-    this.processingStats.failed += failed;
-    this.processingStats.queued -= batch.length;
-    this.processingStats.avgProcessingTime = 
-      (this.processingStats.avgProcessingTime + processingTime) / 2;
-  }
-
-  private async processItem(item: QueueItem): Promise<void> {
-    switch (item.type) {
-      case 'exam_submission':
-        await this.processExamSubmission(item.data);
-        break;
-      case 'feedback_submission':
-        await this.processFeedbackSubmission(item.data);
-        break;
-      default:
-        throw new Error(`Unknown queue item type: ${item.type}`);
-    }
-  }
-
-  private async processExamSubmission(data: { examResult: InsertExamResult; examAnswers: InsertExamAnswer[] }) {
     try {
-      // Submit exam result first
-      await storage.submitExamResult(data.examResult);
+      // Set processing status
+      await redisClient.set(`exam_status_${examData.examId}`, 'processing', { EX: 3600 });
+
+      // Get questions for validation
+      const questions = await storage.getRandomQuestionsByTopic(examData.topic_id, 5);
+      if (questions.length === 0) {
+        throw new Error(`No questions found for topic ${examData.topic_id}`);
+      }
+
+      // Calculate results
+      const correctAnswers = questions.map(q => q.correctAnswer || 'A');
+      const correctCount = examData.answers.filter((answer, index) => 
+        answer === correctAnswers[index]
+      ).length;
+      const wrongCount = examData.answers.filter((answer, index) => 
+        answer !== correctAnswers[index] && answer !== null
+      ).length;
+      const unansweredCount = examData.answers.filter(answer => answer === null).length;
+      const totalQuestions = questions.length;
+      const percentage = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
+
+      // Save exam result
+      const examResult = await storage.submitExamResult({
+        mobile: examData.mobile,
+        topicId: examData.topic_id,
+        topicName: examData.topic_name,
+        assessmentDate: examData.assessment_date,
+        batchName: examData.batch_name || 'General',
+        district: examData.district || 'General',
+        correctCount,
+        wrongCount,
+        unansweredCount,
+        totalQuestions
+      });
+
+      // Save individual answers with proper schema alignment
+      const answerData = [];
+      for (let i = 0; i < examData.answers.length && i < questions.length; i++) {
+        answerData.push({
+          mobile: examData.mobile,
+          topicId: examData.topic_id,
+          question: questions[i].question,
+          selectedAnswer: examData.answers[i],
+          correctAnswer: correctAnswers[i],
+          isCorrect: examData.answers[i] === correctAnswers[i]
+        });
+      }
+
+      if (answerData.length > 0) {
+        await storage.submitExamAnswers(answerData);
+      }
+
+      // Update status to completed
+      await redisClient.set(`exam_status_${examData.examId}`, 'completed', { EX: 3600 });
       
-      // Then submit all answers in batch
-      if (data.examAnswers.length > 0) {
-        await storage.submitExamAnswers(data.examAnswers);
-      }
+      const processingTime = Date.now() - startTime;
+      this.updateMetrics(processingTime, true);
+
+      return {
+        examId: examResult.id,
+        correctCount,
+        wrongCount,
+        unansweredCount,
+        totalQuestions,
+        percentage
+      };
+
     } catch (error) {
-      console.error('Exam submission processing failed:', error);
+      console.error(`Error processing exam ${examData.examId}:`, error);
+      await redisClient.set(`exam_status_${examData.examId}`, 'failed', { EX: 3600 });
+      
+      const processingTime = Date.now() - startTime;
+      this.updateMetrics(processingTime, false);
+      
       throw error;
+    } finally {
+      this.processingItems.delete(examData.examId);
+      this.metrics.processing--;
     }
   }
 
-  private async processFeedbackSubmission(data: { feedback: InsertTrainerFeedback[] }) {
-    try {
-      if (data.feedback.length > 0) {
-        await storage.submitTrainerFeedback(data.feedback);
-      }
-    } catch (error) {
-      console.error('Feedback submission processing failed:', error);
-      throw error;
+  async processBatchFromQueue(): Promise<void> {
+    const queues = ['exam_queue:high', 'exam_queue:normal', 'exam_queue:low'];
+    
+    for (const queueKey of queues) {
+      const items = await redisClient.rpop(queueKey, this.batchSize);
+      if (!items || items.length === 0) continue;
+
+      const promises = items.map(async (item) => {
+        try {
+          const examData: ExamSubmission = JSON.parse(item);
+          return await this.processImmediately(examData);
+        } catch (error) {
+          console.error('Error processing queued exam:', error);
+          this.metrics.failed++;
+        }
+      });
+
+      await Promise.allSettled(promises);
+      break; // Process one queue at a time, prioritizing high -> normal -> low
     }
   }
 
-  // Get queue status for monitoring
-  getStatus() {
+  private updateMetrics(processingTime: number, success: boolean): void {
+    this.processingTimes.push(processingTime);
+    
+    // Keep only last 100 processing times for average calculation
+    if (this.processingTimes.length > 100) {
+      this.processingTimes.shift();
+    }
+
+    this.metrics.averageProcessingTime = 
+      this.processingTimes.reduce((a, b) => a + b, 0) / this.processingTimes.length;
+
+    if (success) {
+      this.metrics.completed++;
+    } else {
+      this.metrics.failed++;
+    }
+
+    this.metrics.currentLoad = this.processingItems.size / this.maxConcurrentProcessing;
+  }
+
+  async getQueueStatus(examId: string): Promise<any> {
+    const status = await redisClient.get(`exam_status_${examId}`);
+    
+    if (status === 'queued') {
+      // Estimate position in queue
+      const queues = ['exam_queue:high', 'exam_queue:normal', 'exam_queue:low'];
+      let position = 0;
+      
+      for (const queueKey of queues) {
+        const queueLength = await redisClient.llen(queueKey);
+        const items = await redisClient.lrange(queueKey, 0, queueLength);
+        
+        const foundIndex = items.findIndex(item => {
+          try {
+            const data = JSON.parse(item);
+            return data.examId === examId;
+          } catch {
+            return false;
+          }
+        });
+
+        if (foundIndex !== -1) {
+          return {
+            status: 'queued',
+            position: position + foundIndex + 1,
+            estimatedWaitTime: Math.ceil((position + foundIndex) * this.metrics.averageProcessingTime / 1000) // seconds
+          };
+        }
+        
+        position += queueLength;
+      }
+    }
+
     return {
-      queueLength: this.queue.length,
-      activeWorkers: this.activeWorkers,
-      maxWorkers: this.maxWorkers,
-      isProcessing: this.processing,
-      stats: this.processingStats,
-      highPriorityItems: this.queue.filter(item => item.priority === 'high').length,
-      oldestItemAge: this.queue.length > 0 ? 
-        Date.now() - Math.min(...this.queue.map(item => item.timestamp)) : 0
+      status: status || 'not_found',
+      position: status === 'processing' ? 0 : null,
+      estimatedWaitTime: status === 'processing' ? 5 : null // 5 seconds for processing
     };
   }
 
-  // Adjust worker count based on load
-  adjustWorkerCount(load: 'low' | 'medium' | 'high') {
-    switch (load) {
-      case 'low':
-        this.maxWorkers = 10;
-        this.batchSize = 25;
-        break;
-      case 'medium':
-        this.maxWorkers = 20;
-        this.batchSize = 50;
-        break;
-      case 'high':
-        this.maxWorkers = 30;
-        this.batchSize = 100;
-        break;
+  getMetrics(): QueueMetrics {
+    return { ...this.metrics };
+  }
+
+  async healthCheck(): Promise<boolean> {
+    try {
+      // Check if we can write to queue
+      const testKey = `health_check_${Date.now()}`;
+      await redisClient.set(testKey, 'test', { EX: 1 });
+      await redisClient.del(testKey);
+      return true;
+    } catch (error) {
+      console.error('Queue health check failed:', error);
+      return false;
     }
   }
 
-  // Clear queue (emergency use)
-  clearQueue() {
-    const clearedItems = this.queue.length;
-    this.queue = [];
-    this.processingStats.queued = 0;
-    return clearedItems;
+  // Start background queue processor
+  startQueueProcessor(): void {
+    setInterval(async () => {
+      try {
+        await this.processBatchFromQueue();
+      } catch (error) {
+        console.error('Queue processor error:', error);
+      }
+    }, 1000); // Process every second
   }
 }
 
-export const highLoadQueue = new HighLoadSubmissionQueue();
-
-// Auto-adjust worker count based on queue length
-setInterval(() => {
-  const status = highLoadQueue.getStatus();
-  
-  if (status.queueLength > 1000) {
-    highLoadQueue.adjustWorkerCount('high');
-  } else if (status.queueLength > 500) {
-    highLoadQueue.adjustWorkerCount('medium');
-  } else {
-    highLoadQueue.adjustWorkerCount('low');
-  }
-}, 30000); // Check every 30 seconds
+export const highLoadQueue = new HighLoadQueueManager();
