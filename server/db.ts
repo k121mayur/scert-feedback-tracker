@@ -13,20 +13,20 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Optimized connection pool for high-load (40k concurrent users)
+// Optimized connection pool for extreme scale (8000 max connections)
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 150, // Increased for 40K concurrent users with load balancing
-  min: 25,  // Higher minimum for immediate availability
-  idleTimeoutMillis: 20000, // Reduced idle timeout for faster recycling
-  connectionTimeoutMillis: 5000, // Faster timeout for better failover
+  max: 8000, // Maximum connections for extreme scale deployment
+  min: 100,  // Higher minimum pool for immediate availability
+  idleTimeoutMillis: 15000, // Faster idle timeout for connection recycling
+  connectionTimeoutMillis: 3000, // Quick timeout for rapid failover
   allowExitOnIdle: true,
-  maxUses: 10000, // Higher connection lifecycle for efficiency
+  maxUses: 15000, // Extended connection lifecycle for efficiency
   keepAlive: true,
-  // Query timeout optimizations for high concurrency
-  statement_timeout: 10000, // 10 second query timeout
-  query_timeout: 8000, // Slightly lower for faster failover
-  application_name: 'maharashtra_teacher_assessment_40k',
+  // Query timeout optimizations for extreme concurrency
+  statement_timeout: 8000, // 8 second query timeout
+  query_timeout: 6000, // 6 second individual query timeout
+  application_name: 'maharashtra_teacher_assessment_8k_pool',
 });
 
 export const db = drizzle({ client: pool, schema });
@@ -51,14 +51,16 @@ export async function checkDatabaseHealth(): Promise<boolean> {
   }
 }
 
-// Performance monitoring for 40K concurrent users
+// Performance monitoring for extreme scale (8K max connections)
 export async function getConnectionStats() {
   return {
     totalConnections: pool.totalCount,
     idleConnections: pool.idleCount,
     waitingClients: pool.waitingCount,
-    maxConnections: 150,
-    utilizationPercent: Math.round((pool.totalCount / 150) * 100)
+    maxConnections: 8000,
+    utilizationPercent: Math.round((pool.totalCount / 8000) * 100),
+    minConnections: 100,
+    connectionHealth: pool.totalCount > 0 ? 'healthy' : 'warning'
   };
 }
 
