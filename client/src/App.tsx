@@ -30,6 +30,7 @@ function Router() {
       <Route path="/admin/add-teacher" component={AddTeacher} />
       <Route path="/admin/edit-teacher" component={EditTeacher} />
       <Route path="/admin/assessment-control" component={AssessmentControl} />
+      <Route path="/assessment-control" component={AssessmentControl} />
       <Route component={NotFound} />
     </Switch>
   );
