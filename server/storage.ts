@@ -637,7 +637,7 @@ export class DatabaseStorage implements IStorage {
           const topicInfo = allTopics.find(t => t.topicId === topic.topicId);
           topicMap.set(topic.topicId, {
             id: topic.topicId,
-            name: topicInfo?.topicName ? `${topic.topicId}: ${topicInfo.topicName}` : topic.topicId,
+            name: topicInfo ? `${topic.topicId}: ${topicInfo.topicName}` : topic.topicId,
             isActive: topic.isActive
           });
         }
