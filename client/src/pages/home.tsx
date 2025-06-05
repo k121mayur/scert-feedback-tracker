@@ -18,17 +18,11 @@ export default function Home() {
               <h1 className="text-xl font-medium text-foreground">Teacher Training Portal</h1>
             </div>
             <nav className="hidden md:flex space-x-8">
-              <Link href="#exam" className="text-muted-foreground hover:text-primary transition-colors">
-                Examination
+              <Link href="#about-us" className="text-muted-foreground hover:text-primary transition-colors">
+                About Us
               </Link>
-              <Link href="#results" className="text-muted-foreground hover:text-primary transition-colors">
-                Results
-              </Link>
-              <Link href="#feedback" className="text-muted-foreground hover:text-primary transition-colors">
-                Feedback
-              </Link>
-              <Link href="/admin" className="text-muted-foreground hover:text-primary transition-colors">
-                Administration
+              <Link href="#about-scert" className="text-muted-foreground hover:text-primary transition-colors">
+                About SCERT
               </Link>
             </nav>
             <div className="flex items-center">
@@ -45,7 +39,7 @@ export default function Home() {
             <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="student" className="flex items-center space-x-2">
                 <User className="h-4 w-4" />
-                <span>Student Portal</span>
+                <span>Teacher Portal</span>
               </TabsTrigger>
               <TabsTrigger value="admin" className="flex items-center space-x-2">
                 <Settings className="h-4 w-4" />
