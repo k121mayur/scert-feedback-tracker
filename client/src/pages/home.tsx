@@ -57,48 +57,21 @@ export default function Home() {
           <TabsContent value="student">
             {/* New Date-Based Assessment System - Primary Section */}
             <section id="new-assessment" className="mb-12">
-              <Card className="max-w-2xl mx-auto material-shadow-2 border-2 border-primary">
-                <CardHeader className="bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-t-lg">
-                  <CardTitle className="text-2xl font-medium flex items-center">
-                    <Calendar className="mr-2" />
-                    New Date-Based Assessment System
+              <Card className="max-w-md mx-auto">
+                <CardHeader className="text-center">
+                  <CardTitle className="text-xl font-medium flex items-center justify-center">
+                    <Calendar className="mr-2 h-5 w-5" />
+                    Assessment System
                   </CardTitle>
-                  <p className="text-primary-foreground/90 mt-2">
-                    Enhanced assessment platform with scheduled topics for June 1-10, 2025
-                  </p>
                 </CardHeader>
-                <CardContent className="p-8">
-                  <div className="text-center space-y-6">
-                    <div className="space-y-2">
-                      <h3 className="text-xl font-semibold text-foreground">Modern Assessment Experience</h3>
-                      <p className="text-muted-foreground">
-                        Select from 5 topics per assessment date • Randomized questions • Comprehensive tracking
-                      </p>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                      <div className="p-4 bg-muted rounded-lg">
-                        <div className="font-semibold text-primary">10 Assessment Dates</div>
-                        <div className="text-muted-foreground">June 1-10, 2025</div>
-                      </div>
-                      <div className="p-4 bg-muted rounded-lg">
-                        <div className="font-semibold text-primary">5 Topics/Date</div>
-                        <div className="text-muted-foreground">Varied subjects</div>
-                      </div>
-                      <div className="p-4 bg-muted rounded-lg">
-                        <div className="font-semibold text-primary">5 Questions</div>
-                        <div className="text-muted-foreground">From 12-question banks</div>
-                      </div>
-                    </div>
-
-                    <Button 
-                      onClick={() => setLocation('/new-exam')}
-                      size="lg" 
-                      className="w-full md:w-auto px-8 py-3 text-lg font-medium"
-                    >
-                      Start New Assessment
-                    </Button>
-                  </div>
+                <CardContent className="text-center">
+                  <Button 
+                    onClick={() => setLocation('/new-exam')}
+                    size="lg" 
+                    className="w-full"
+                  >
+                    Start Assessment
+                  </Button>
                 </CardContent>
               </Card>
             </section>
