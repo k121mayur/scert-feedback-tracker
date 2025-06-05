@@ -79,10 +79,12 @@ def import_data():
                             VALUES (%s, %s, %s, %s, %s, %s)
                             ON CONFLICT (mobile) DO NOTHING
                         """, teacher_batch)
+                        conn.commit()
                         teacher_batch = []
                         print(f"Inserted batch at record {count}")
                     except Exception as e:
                         print(f"Error inserting teachers: {e}")
+                        conn.rollback()
                         teacher_batch = []
                 
                 if len(batch_batch) >= 50:
@@ -92,9 +94,11 @@ def import_data():
                             VALUES (%s, %s, %s, %s, %s)
                             ON CONFLICT (batch_name) DO NOTHING
                         """, batch_batch)
+                        conn.commit()
                         batch_batch = []
                     except Exception as e:
                         print(f"Error inserting batches: {e}")
+                        conn.rollback()
                         batch_batch = []
                 
                 if len(batch_teacher_batch) >= batch_size:
@@ -104,9 +108,11 @@ def import_data():
                             VALUES (%s, %s, %s, %s)
                             ON CONFLICT (batch_name, teacher_mobile) DO NOTHING
                         """, batch_teacher_batch)
+                        conn.commit()
                         batch_teacher_batch = []
                     except Exception as e:
                         print(f"Error inserting batch_teachers: {e}")
+                        conn.rollback()
                         batch_teacher_batch = []
         
         # Insert remaining records

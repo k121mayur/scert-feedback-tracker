@@ -1,145 +1,100 @@
-const { readFileSync } = require('fs');
-const { Pool } = require('@neondatabase/serverless');
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const fs = require('fs');
+const { Pool } = require('pg');
 
 async function bulkImport() {
-  console.log('Starting bulk import of production data...');
-  
-  const csvContent = readFileSync('./attached_assets/batch_teachers_1749097105409.csv', 'utf8');
-  const lines = csvContent.trim().split('\n');
-  
-  // Skip header row
-  const dataRows = lines.slice(1).filter(line => line.trim().length > 0);
-  console.log(`Processing ${dataRows.length} teacher records...`);
-  
-  const batchData = new Map();
-  const teacherData = [];
-  const batchTeacherData = [];
-  
-  let validRecords = 0;
-  
-  for (const line of dataRows) {
-    const parts = line.split(',');
-    if (parts.length < 7) continue;
-    
-    const [district, batchName, serviceType, trainingGroup, teacherId, teacherName, phoneNumber] = parts;
-    
-    // Validate phone number
-    const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
-    if (cleanPhone.length < 10 || phoneNumber === 'null') continue;
-    
-    const mobile = cleanPhone.substring(0, 10);
-    
-    // Store unique batches
-    if (!batchData.has(batchName)) {
-      batchData.set(batchName, {
-        batchName,
-        district,
-        coordinatorName: 'Production Import',
-        serviceType: serviceType || 'Primary',
-        trainingGroup: trainingGroup || 'Primary'
-      });
-    }
-    
-    // Store teachers
-    teacherData.push({
-      teacherId: teacherId === 'null' ? null : teacherId,
-      teacherName,
-      mobile,
-      district,
-      serviceType: serviceType || 'Primary',
-      trainingGroup: trainingGroup || 'Primary'
-    });
-    
-    // Store batch-teacher relationships
-    batchTeacherData.push({
-      batchName,
-      teacherMobile: mobile,
-      teacherName,
-      district
-    });
-    
-    validRecords++;
-  }
-  
-  console.log(`Valid records: ${validRecords}`);
-  console.log(`Unique batches: ${batchData.size}`);
-  
-  const client = await pool.connect();
-  
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL
+  });
+
   try {
-    await client.query('BEGIN');
+    console.log('Starting bulk import...');
     
-    // Insert batches
-    console.log('Inserting batches...');
-    const batchValues = Array.from(batchData.values());
-    for (let i = 0; i < batchValues.length; i += 100) {
-      const chunk = batchValues.slice(i, i + 100);
-      const placeholders = chunk.map((_, idx) => `($${idx * 5 + 1}, $${idx * 5 + 2}, $${idx * 5 + 3}, $${idx * 5 + 4}, $${idx * 5 + 5})`).join(',');
-      const values = chunk.flatMap(b => [b.batchName, b.district, b.coordinatorName, b.serviceType, b.trainingGroup]);
-      
-      await client.query(`
-        INSERT INTO batches (batch_name, district, coordinator_name, service_type, training_group)
-        VALUES ${placeholders}
-        ON CONFLICT (batch_name) DO NOTHING
-      `, values);
-    }
+    const data = fs.readFileSync('./attached_assets/batch_teachers_1749097105409.csv', 'utf8');
+    const lines = data.split('\n').slice(1); // Skip header
     
-    // Insert teachers
-    console.log('Inserting teachers...');
-    for (let i = 0; i < teacherData.length; i += 1000) {
-      const chunk = teacherData.slice(i, i + 1000);
-      const placeholders = chunk.map((_, idx) => `($${idx * 6 + 1}, $${idx * 6 + 2}, $${idx * 6 + 3}, $${idx * 6 + 4}, $${idx * 6 + 5}, $${idx * 6 + 6})`).join(',');
-      const values = chunk.flatMap(t => [t.teacherId, t.teacherName, t.mobile, t.district, t.serviceType, t.trainingGroup]);
+    let insertedCount = 0;
+    let batchCount = 0;
+    const batchSize = 500;
+    let values = [];
+    
+    for (const line of lines) {
+      if (!line.trim()) continue;
       
-      await client.query(`
-        INSERT INTO teachers (teacher_id, teacher_name, mobile, district, service_type, training_group)
-        VALUES ${placeholders}
-        ON CONFLICT (mobile) DO NOTHING
-      `, values);
+      const cols = line.split(',');
+      if (cols.length < 7) continue;
       
-      if ((i + 1000) % 5000 === 0) {
-        console.log(`Inserted ${i + 1000} teachers...`);
+      const [district, batchName, serviceType, trainingGroup, teacherId, teacherName, phoneNumber] = cols;
+      
+      // Clean phone number
+      const mobile = phoneNumber.replace(/[^0-9]/g, '').substring(0, 10);
+      if (mobile.length !== 10 || phoneNumber === 'null') continue;
+      
+      // Handle null teacher_id
+      const cleanTeacherId = (teacherId === 'null' || !teacherId) ? null : teacherId;
+      
+      values.push([
+        cleanTeacherId,
+        teacherName.replace(/'/g, "''"),
+        mobile,
+        district.replace(/'/g, "''"),
+        serviceType || 'Primary',
+        trainingGroup || 'Primary'
+      ]);
+      
+      if (values.length >= batchSize) {
+        try {
+          const placeholders = values.map((_, i) => `($${i*6 + 1}, $${i*6 + 2}, $${i*6 + 3}, $${i*6 + 4}, $${i*6 + 5}, $${i*6 + 6})`).join(',');
+          const flatValues = values.flat();
+          
+          await pool.query(`
+            INSERT INTO teachers (teacher_id, teacher_name, mobile, district, service_type, training_group)
+            VALUES ${placeholders}
+            ON CONFLICT (mobile) DO NOTHING
+          `, flatValues);
+          
+          insertedCount += values.length;
+          batchCount++;
+          console.log(`Batch ${batchCount}: ${insertedCount} records processed`);
+          values = [];
+        } catch (err) {
+          console.log(`Error in batch ${batchCount}:`, err.message);
+          values = [];
+        }
       }
     }
     
-    // Insert batch-teacher relationships
-    console.log('Inserting batch-teacher relationships...');
-    for (let i = 0; i < batchTeacherData.length; i += 1000) {
-      const chunk = batchTeacherData.slice(i, i + 1000);
-      const placeholders = chunk.map((_, idx) => `($${idx * 4 + 1}, $${idx * 4 + 2}, $${idx * 4 + 3}, $${idx * 4 + 4})`).join(',');
-      const values = chunk.flatMap(bt => [bt.batchName, bt.teacherMobile, bt.teacherName, bt.district]);
-      
-      await client.query(`
-        INSERT INTO batch_teachers (batch_name, teacher_mobile, teacher_name, district)
-        VALUES ${placeholders}
-        ON CONFLICT (batch_name, teacher_mobile) DO NOTHING
-      `, values);
-      
-      if ((i + 1000) % 5000 === 0) {
-        console.log(`Inserted ${i + 1000} batch relationships...`);
+    // Insert remaining records
+    if (values.length > 0) {
+      try {
+        const placeholders = values.map((_, i) => `($${i*6 + 1}, $${i*6 + 2}, $${i*6 + 3}, $${i*6 + 4}, $${i*6 + 5}, $${i*6 + 6})`).join(',');
+        const flatValues = values.flat();
+        
+        await pool.query(`
+          INSERT INTO teachers (teacher_id, teacher_name, mobile, district, service_type, training_group)
+          VALUES ${placeholders}
+          ON CONFLICT (mobile) DO NOTHING
+        `, flatValues);
+        
+        insertedCount += values.length;
+        console.log(`Final batch: ${insertedCount} total records processed`);
+      } catch (err) {
+        console.log('Error in final batch:', err.message);
       }
     }
-    
-    await client.query('COMMIT');
     
     // Verify results
-    const teacherCount = await client.query('SELECT COUNT(*) FROM teachers');
-    const districtCount = await client.query('SELECT COUNT(DISTINCT district) FROM teachers');
-    const batchCount = await client.query('SELECT COUNT(*) FROM batches');
+    const result = await pool.query('SELECT COUNT(*) as count FROM teachers');
+    const districtResult = await pool.query('SELECT COUNT(DISTINCT district) as count FROM teachers');
     
-    console.log('\nImport completed successfully!');
-    console.log(`Total teachers: ${teacherCount.rows[0].count}`);
-    console.log(`Total districts: ${districtCount.rows[0].count}`);
-    console.log(`Total batches: ${batchCount.rows[0].count}`);
+    console.log(`\nImport completed!`);
+    console.log(`Total teachers in database: ${result.rows[0].count}`);
+    console.log(`Total districts: ${districtResult.rows[0].count}`);
     
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Import failed:', error);
+    console.error('Import error:', error);
   } finally {
-    client.release();
+    await pool.end();
   }
 }
 
-bulkImport().catch(console.error);
+bulkImport();
