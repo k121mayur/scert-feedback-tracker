@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
+import { getConnectionStats } from './db';
+import { cache } from './cache';
 
-// Circuit breaker for database connections
 class CircuitBreaker {
   private failures = 0;
   private lastFailureTime = 0;
@@ -35,132 +36,166 @@ class CircuitBreaker {
   private onFailure() {
     this.failures++;
     this.lastFailureTime = Date.now();
+    
     if (this.failures >= this.threshold) {
       this.state = 'OPEN';
     }
   }
 
   getState() {
-    return this.state;
+    return {
+      state: this.state,
+      failures: this.failures,
+      lastFailure: new Date(this.lastFailureTime)
+    };
   }
 }
 
 export const dbCircuitBreaker = new CircuitBreaker();
 
-// Connection pooling middleware
+// Connection pool monitoring middleware
 export function connectionPoolingMiddleware(req: Request, res: Response, next: NextFunction) {
-  // Set connection headers for load balancing
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Keep-Alive', 'timeout=30, max=100');
-  
-  // Request timeout handling
-  const timeout = setTimeout(() => {
-    if (!res.headersSent) {
-      res.status(408).json({ 
-        error: 'Request timeout',
-        timestamp: new Date().toISOString()
-      });
+  const startTime = Date.now();
+
+  res.on('finish', async () => {
+    const responseTime = Date.now() - startTime;
+    
+    // Log slow queries
+    if (responseTime > 1000) {
+      console.warn(`Slow request: ${req.method} ${req.path} - ${responseTime}ms`);
     }
-  }, 25000);
-  
-  res.on('finish', () => {
-    clearTimeout(timeout);
+
+    // Monitor connection pool health
+    try {
+      const stats = await getConnectionStats();
+      if (stats.utilizationPercent > 85) {
+        console.warn(`High connection utilization: ${stats.utilizationPercent}%`);
+      }
+    } catch (error) {
+      console.error('Failed to get connection stats:', error);
+    }
   });
-  
+
   next();
 }
 
-// Memory management for high load
+// Memory management middleware
 export function memoryManagementMiddleware(req: Request, res: Response, next: NextFunction) {
-  const memUsage = process.memoryUsage();
-  const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
-  
-  // Memory pressure detection
-  if (heapUsedMB > 450) { // 450MB threshold
-    console.warn(`High memory usage: ${heapUsedMB}MB`);
+  const memoryUsage = process.memoryUsage();
+  const heapUsedMB = memoryUsage.heapUsed / 1024 / 1024;
+
+  // Clear caches if memory usage is high
+  if (heapUsedMB > 1500) { // 1.5GB threshold
+    console.warn(`High memory usage: ${heapUsedMB.toFixed(2)}MB - Clearing caches`);
     
-    // Force garbage collection if available
-    if (global.gc) {
-      global.gc();
-    }
-    
-    // If memory is critically high, reject new requests
-    if (heapUsedMB > 500) {
-      return res.status(503).json({
-        error: 'Service temporarily unavailable - high memory usage',
-        retryAfter: 30
-      });
-    }
+    // Clear less critical caches
+    cache.keys().forEach(key => {
+      if (key.includes('stats') || key.includes('analytics')) {
+        cache.del(key);
+      }
+    });
   }
-  
+
   next();
 }
 
-// Rate limiting per IP for deployment
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-
+// Rate limiting for deployment
 export function deploymentRateLimiter(req: Request, res: Response, next: NextFunction) {
-  const clientIP = req.ip || req.socket.remoteAddress || 'unknown';
-  const now = Date.now();
-  const windowMs = 60000; // 1 minute
-  const maxRequests = 100; // Per minute per IP
+  const clientKey = req.ip || 'unknown';
+  const rateLimitKey = `rate_limit_${clientKey}`;
   
-  const clientData = rateLimitMap.get(clientIP);
-  
-  if (!clientData || now > clientData.resetTime) {
-    rateLimitMap.set(clientIP, {
-      count: 1,
-      resetTime: now + windowMs
-    });
-    return next();
-  }
-  
-  if (clientData.count >= maxRequests) {
-    res.setHeader('Retry-After', Math.ceil((clientData.resetTime - now) / 1000));
+  const requests = cache.get(rateLimitKey) || 0;
+  const limit = 100; // 100 requests per minute
+
+  if (requests >= limit) {
     return res.status(429).json({
-      error: 'Too many requests',
-      retryAfter: Math.ceil((clientData.resetTime - now) / 1000)
+      error: 'Rate limit exceeded',
+      message: 'Too many requests, please try again later'
     });
   }
-  
-  clientData.count++;
+
+  cache.set(rateLimitKey, requests + 1, 60); // 1 minute TTL
   next();
 }
 
-// Health check endpoint for load balancers
+// Health check endpoint
 export function healthCheckEndpoint(req: Request, res: Response) {
-  const memUsage = process.memoryUsage();
-  const uptime = process.uptime();
-  
-  res.json({
-    status: 'healthy',
+  const healthCheck = {
     timestamp: new Date().toISOString(),
-    uptime: Math.floor(uptime),
-    memory: {
-      used: Math.round(memUsage.heapUsed / 1024 / 1024),
-      total: Math.round(memUsage.heapTotal / 1024 / 1024)
+    status: 'healthy',
+    services: {
+      database: 'unknown',
+      cache: 'unknown',
+      memory: 'unknown'
     },
-    circuitBreaker: dbCircuitBreaker.getState()
+    metrics: {
+      uptime: process.uptime(),
+      memoryUsage: process.memoryUsage(),
+      loadAverage: require('os').loadavg()
+    }
+  };
+
+  // Check database health
+  dbCircuitBreaker.execute(async () => {
+    await getConnectionStats();
+    healthCheck.services.database = 'healthy';
+  }).catch(() => {
+    healthCheck.services.database = 'unhealthy';
+    healthCheck.status = 'degraded';
   });
+
+  // Check cache health
+  try {
+    cache.set('health_check', 'ok', 10);
+    const result = cache.get('health_check');
+    healthCheck.services.cache = result === 'ok' ? 'healthy' : 'unhealthy';
+    cache.del('health_check');
+  } catch (error) {
+    healthCheck.services.cache = 'unhealthy';
+    healthCheck.status = 'degraded';
+  }
+
+  // Check memory usage
+  const memoryUsage = process.memoryUsage();
+  const heapUsedMB = memoryUsage.heapUsed / 1024 / 1024;
+  healthCheck.services.memory = heapUsedMB < 1500 ? 'healthy' : 'warning';
+
+  if (heapUsedMB > 2000) {
+    healthCheck.services.memory = 'critical';
+    healthCheck.status = 'unhealthy';
+  }
+
+  const statusCode = healthCheck.status === 'healthy' ? 200 : 
+                    healthCheck.status === 'degraded' ? 207 : 503;
+
+  res.status(statusCode).json(healthCheck);
 }
 
 // Graceful shutdown handler
 export function setupGracefulShutdown(server: any) {
   const gracefulShutdown = (signal: string) => {
-    console.log(`Received ${signal}. Starting graceful shutdown...`);
+    console.log(`Received ${signal}. Graceful shutdown initiated...`);
     
     server.close(() => {
-      console.log('HTTP server closed.');
+      console.log('HTTP server closed');
+      
+      // Close database connections
+      // db.end() would be called here if available
+      
+      // Clear all timers and intervals
+      cache.flushAll();
+      
+      console.log('Graceful shutdown completed');
       process.exit(0);
     });
-    
-    // Force close after 10 seconds
+
+    // Force close after 30 seconds
     setTimeout(() => {
-      console.log('Forcing shutdown after timeout...');
+      console.error('Could not close connections in time, forcefully shutting down');
       process.exit(1);
-    }, 10000);
+    }, 30000);
   };
-  
+
   process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
   process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 }
