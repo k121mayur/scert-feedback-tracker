@@ -5,6 +5,7 @@ import { hybridQueue } from "./queue-fallback";
 import { z } from "zod";
 import multer from "multer";
 import { parse } from "csv-parse";
+import { assessmentCache, cache, getCacheKey } from "./cache";
 
 // Rate limiting middleware for high-load scenarios
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -463,6 +464,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateAssessmentDateStatus(dateItem.date, dateItem.isActive);
       }
 
+      // Clear assessment-related caches to ensure changes are reflected immediately
+      assessmentCache.flushAll();
+      cache.del(getCacheKey.assessmentDates());
+      
+      console.log("Assessment date settings updated and cache cleared");
       res.json({ success: true, message: "Date settings updated successfully" });
     } catch (error) {
       console.error("Error updating assessment date settings:", error);
@@ -492,6 +498,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateTopicActiveStatus(topic.id, topic.isActive);
       }
 
+      // Clear assessment-related caches to ensure changes are reflected immediately
+      assessmentCache.flushAll();
+      cache.del(getCacheKey.assessmentDates());
+      
+      console.log("Topic settings updated and cache cleared");
       res.json({ success: true, message: "Topic settings updated successfully" });
     } catch (error) {
       console.error("Error updating assessment topic settings:", error);
