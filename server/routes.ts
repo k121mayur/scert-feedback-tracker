@@ -417,7 +417,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teacherName: z.string(),
         mobile: z.string().length(10),
         payId: z.string(),
-        district: z.string()
+        district: z.string(),
+        serviceType: z.string(),
+        trainingGroup: z.string()
       });
 
       const validatedData = teacherSchema.parse(req.body);
