@@ -460,15 +460,9 @@ export class DatabaseStorage implements IStorage {
       // Optimized batch insert for 30K concurrent feedback submissions
       const newFeedback = await db.insert(trainerFeedback).values(feedback).returning();
       
-      // Clear feedback cache for affected topics and users
-      const uniqueTopics = [...new Set(feedback.map(f => f.topicId))];
-      const uniqueMobiles = [...new Set(feedback.map(f => f.mobile))];
-      
-      uniqueTopics.forEach(topicId => {
-        uniqueMobiles.forEach(mobile => {
-          const cacheKey = getCacheKey.teacherFeedback(mobile, topicId);
-          feedbackCache.del(cacheKey);
-        });
+      // Clear feedback cache for affected users
+      feedback.forEach(f => {
+        feedbackCache.del(`tf:${f.mobile}`);
       });
       
       return newFeedback;
