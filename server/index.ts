@@ -14,6 +14,7 @@ import {
   ddosProtection,
   fairResourceAllocation
 } from "./rate-limiting";
+import { queueProcessor } from "./queue-processor";
 
 const app = express();
 
@@ -117,6 +118,9 @@ app.use((req, res, next) => {
     // Start memory monitoring
     monitorMemory();
     
+    // Start queue processor for exam submissions
+    queueProcessor.startProcessing();
+    
     // Setup graceful shutdown
     setupGracefulShutdown(server);
     
@@ -124,6 +128,7 @@ app.use((req, res, next) => {
     log(`Max connections: ${server.maxConnections}`);
     log(`Keep-alive timeout: ${server.keepAliveTimeout}ms`);
     log(`Connection backlog: 511`);
+    log(`Queue processor started`);
     log(`Production deployment ready`);
   });
 })();

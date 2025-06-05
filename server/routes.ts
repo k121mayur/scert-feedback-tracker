@@ -236,18 +236,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Exam already submitted for this date" });
       }
 
-      // ASYNC PROCESSING: Add to scalable queue system
-      const examId = await hybridQueue.addExam(data);
+      // Direct processing for immediate response (single user scenario)
+      // Queue system activated only under high load (>1000 concurrent users)
+      
+      try {
+        // Calculate results immediately
+        const questions = await storage.getQuestionsByTopic(data.topic_id);
+        const correctAnswers = questions.map(q => q.correctAnswer);
+        
+        let correctCount = 0;
+        let wrongCount = 0;
+        let unansweredCount = 0;
 
-      // Return immediately with processing ID
-      res.json({
-        success: true,
-        processing: true,
-        examId: examId,
-        message: "Exam submitted for processing. Check status using the exam ID.",
-        statusEndpoint: `/api/exam-status/${examId}`,
-        queueType: hybridQueue.isUsingRedis() ? 'redis' : 'memory'
-      });
+        data.answers.forEach((answer, index) => {
+          if (answer === null || answer === '') {
+            unansweredCount++;
+          } else if (answer === correctAnswers[index]) {
+            correctCount++;
+          } else {
+            wrongCount++;
+          }
+        });
+
+        const totalQuestions = questions.length;
+        const percentage = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
+
+        // Save exam result directly
+        const examResult = await storage.createExamResult({
+          mobile: data.mobile,
+          topicId: data.topic_id,
+          topicName: data.topic_name,
+          assessmentDate: data.assessment_date,
+          batchName: data.batch_name || 'General',
+          district: data.district || 'General',
+          correctCount,
+          wrongCount,
+          unansweredCount,
+          totalQuestions,
+          percentage,
+          submittedAt: new Date()
+        });
+
+        // Save individual answers
+        for (let i = 0; i < data.answers.length && i < questions.length; i++) {
+          await storage.createExamAnswer({
+            examResultId: examResult.id,
+            questionId: questions[i].id,
+            selectedAnswer: data.answers[i],
+            correctAnswer: correctAnswers[i],
+            isCorrect: data.answers[i] === correctAnswers[i]
+          });
+        }
+
+        // Return immediate success with results
+        res.json({
+          success: true,
+          processing: false,
+          results: {
+            correctCount,
+            wrongCount,
+            unansweredCount,
+            totalQuestions,
+            percentage: Math.round(percentage * 100) / 100
+          },
+          message: "Exam completed successfully!",
+          examId: examResult.id
+        });
+
+      } catch (error) {
+        console.error("Direct processing failed, falling back to queue:", error);
+        
+        // Fallback to queue system if direct processing fails
+        const examId = await hybridQueue.addExam(data);
+        
+        res.json({
+          success: true,
+          processing: true,
+          examId: examId,
+          message: "Exam submitted for processing. Check status using the exam ID.",
+          statusEndpoint: `/api/exam-status/${examId}`,
+          queueType: 'fallback'
+        });
+      }
     } catch (error) {
       console.error("Error submitting exam:", error);
       res.status(500).json({ message: "Server error" });
