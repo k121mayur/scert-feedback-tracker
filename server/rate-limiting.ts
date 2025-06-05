@@ -21,18 +21,23 @@ export class AdvancedRateLimiter {
   middleware() {
     return async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const key = this.config.keyGenerator ? 
-          this.config.keyGenerator(req) : 
-          `rate_limit_${req.ip}`;
+        // Use mobile number from request body for better user identification
+        const mobile = req.body?.mobile || req.query?.mobile;
+        const key = mobile ? 
+          `${this.config.keyGenerator ? this.config.keyGenerator(req).split('_')[0] : 'rate_limit'}_${mobile}` :
+          this.config.keyGenerator ? this.config.keyGenerator(req) : `rate_limit_${req.ip}`;
 
         const current = await this.getCurrentRequests(key);
         
-        if (current >= this.config.maxRequests) {
+        // More lenient rate limiting for authenticated users with mobile numbers
+        const effectiveLimit = mobile ? this.config.maxRequests * 2 : this.config.maxRequests;
+        
+        if (current >= effectiveLimit) {
           return res.status(429).json({
             error: 'Rate limit exceeded',
             message: 'बहुत अधिक अनुरोध। कृपया कुछ समय प्रतीक्षा करें।',
             retryAfter: Math.ceil(this.config.windowMs / 1000),
-            currentLimit: this.config.maxRequests,
+            currentLimit: effectiveLimit,
             windowMs: this.config.windowMs
           });
         }
@@ -41,8 +46,8 @@ export class AdvancedRateLimiter {
         
         // Add rate limit headers
         res.set({
-          'X-RateLimit-Limit': this.config.maxRequests.toString(),
-          'X-RateLimit-Remaining': (this.config.maxRequests - current - 1).toString(),
+          'X-RateLimit-Limit': effectiveLimit.toString(),
+          'X-RateLimit-Remaining': (effectiveLimit - current - 1).toString(),
           'X-RateLimit-Reset': new Date(Date.now() + this.config.windowMs).toISOString()
         });
 
@@ -73,7 +78,7 @@ export class AdvancedRateLimiter {
 // Pre-configured rate limiters for different endpoints
 export const assessmentRateLimiter = new AdvancedRateLimiter({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 100, // 100 requests per minute per IP
+  maxRequests: 500, // 500 requests per minute per IP (increased for high usage)
   keyGenerator: (req) => `assessment_${req.ip}`,
   skipSuccessfulRequests: false
 });
@@ -87,14 +92,14 @@ export const authRateLimiter = new AdvancedRateLimiter({
 
 export const submissionRateLimiter = new AdvancedRateLimiter({
   windowMs: 5 * 60 * 1000, // 5 minutes
-  maxRequests: 10, // 10 exam submissions per 5 minutes per IP
+  maxRequests: 50, // 50 exam submissions per 5 minutes per IP (increased for high usage)
   keyGenerator: (req) => `submission_${req.ip}`,
   skipSuccessfulRequests: false
 });
 
 export const globalRateLimiter = new AdvancedRateLimiter({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 200, // 200 requests per minute per IP (generous for normal use)
+  maxRequests: 1000, // 1000 requests per minute per IP (increased for high concurrent usage)
   keyGenerator: (req) => `global_${req.ip}`
 });
 
