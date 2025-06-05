@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { hybridQueue } from "./queue-fallback";
 import { dataReconciliation } from "./data-reconciliation";
 import { productionImporter } from "./import-service";
+import { highLoadQueue } from "./high-load-queue";
 import { z } from "zod";
 import multer from "multer";
 import { parse } from "csv-parse";
@@ -418,33 +419,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       // Check for concurrent load and use appropriate processing strategy
-      const currentLoad = await queueManager.getQueueLength();
+      const currentLoad = await highLoadQueue.getQueueLength();
       const shouldUseQueue = currentLoad > 100; // Queue threshold for feedback submissions
       
       if (shouldUseQueue) {
         // High-load scenario: Queue the feedback submission
         const feedbackJob = {
-          id: `feedback_${data.mobile_no}_${Date.now()}`,
-          type: 'feedback_submission',
-          data: {
-            topic_name: data.topic_name,
-            mobile_no: data.mobile_no,
-            batch_name: data.batch_name,
-            district: data.district,
-            questions: data.questions,
-            feedback_answers: data.feedback_answers
-          },
-          priority: 2, // Medium priority for feedback
-          timestamp: Date.now()
+          topic_name: data.topic_name,
+          mobile_no: data.mobile_no,
+          batch_name: data.batch_name,
+          district: data.district,
+          questions: data.questions,
+          feedback_answers: data.feedback_answers
         };
         
-        await queueManager.addJob(feedbackJob);
+        await highLoadQueue.addFeedbackToQueue(feedbackJob, 'normal');
         
         res.json({
           success: true,
           processing: true,
           message: "Feedback submission queued for processing",
-          queuePosition: await queueManager.getQueueLength()
+          queuePosition: await highLoadQueue.getQueueLength()
         });
       } else {
         // Low-load scenario: Process immediately

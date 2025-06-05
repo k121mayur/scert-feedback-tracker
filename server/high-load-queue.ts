@@ -145,8 +145,90 @@ export class HighLoadQueueManager {
     }
   }
 
+  async processFeedbackImmediately(feedbackData: any): Promise<void> {
+    const startTime = Date.now();
+    const feedbackId = feedbackData.id || `feedback_${feedbackData.data.mobile_no}_${Date.now()}`;
+    
+    try {
+      this.processingItems.add(feedbackId);
+      this.metrics.processing++;
+      
+      // Update status to processing
+      await redisClient.set(`feedback_status_${feedbackId}`, 'processing', { EX: 3600 });
+
+      // Prepare feedback entries for database insertion
+      const feedbackEntries = feedbackData.data.questions.map((question: string, index: number) => ({
+        topicId: feedbackData.data.topic_name,
+        mobile: feedbackData.data.mobile_no,
+        feedbackQue: question,
+        feedback: feedbackData.data.feedback_answers[index],
+        batchName: feedbackData.data.batch_name,
+        district: feedbackData.data.district
+      }));
+
+      // Submit feedback to database
+      await storage.submitTrainerFeedback(feedbackEntries);
+
+      // Create topic feedback record to prevent duplicates
+      await storage.createTopicFeedback({
+        topicName: feedbackData.data.topic_name,
+        mobile: feedbackData.data.mobile_no
+      });
+
+      // Update status to completed
+      await redisClient.set(`feedback_status_${feedbackId}`, 'completed', { EX: 3600 });
+
+      const processingTime = Date.now() - startTime;
+      this.updateMetrics(processingTime, true);
+      console.log(`Feedback processing completed: ${feedbackId}`);
+      
+    } catch (error) {
+      console.error('Error processing feedback immediately:', error);
+      await redisClient.set(`feedback_status_${feedbackId}`, 'failed', { EX: 3600 });
+      
+      const processingTime = Date.now() - startTime;
+      this.updateMetrics(processingTime, false);
+      
+      throw error;
+    } finally {
+      this.processingItems.delete(feedbackId);
+      this.metrics.processing--;
+    }
+  }
+
+  async addFeedbackToQueue(feedbackData: any, priority: 'high' | 'normal' | 'low' = 'normal'): Promise<void> {
+    const queueKey = `feedback_queue:${priority}`;
+    const feedbackId = `feedback_${feedbackData.mobile_no}_${Date.now()}`;
+    
+    const queueItem = {
+      id: feedbackId,
+      data: feedbackData,
+      timestamp: Date.now(),
+      priority,
+      type: 'feedback'
+    };
+
+    await redisClient.lpush(queueKey, JSON.stringify(queueItem));
+    await redisClient.set(`feedback_status_${feedbackId}`, 'queued', { EX: 3600 });
+    
+    this.metrics.queued++;
+    console.log(`Added feedback to ${priority} priority queue: ${feedbackId}`);
+  }
+
+  async getQueueLength(): Promise<number> {
+    const examQueues = ['exam_queue:high', 'exam_queue:normal', 'exam_queue:low'];
+    const feedbackQueues = ['feedback_queue:high', 'feedback_queue:normal', 'feedback_queue:low'];
+    
+    let totalLength = 0;
+    for (const queue of [...examQueues, ...feedbackQueues]) {
+      totalLength += await redisClient.llen(queue);
+    }
+    return totalLength;
+  }
+
   async processBatchFromQueue(): Promise<void> {
-    const queues = ['exam_queue:high', 'exam_queue:normal', 'exam_queue:low'];
+    const examQueues = ['exam_queue:high', 'exam_queue:normal', 'exam_queue:low'];
+    const feedbackQueues = ['feedback_queue:high', 'feedback_queue:normal', 'feedback_queue:low'];
     
     for (const queueKey of queues) {
       const items = await redisClient.rpop(queueKey, this.batchSize);
