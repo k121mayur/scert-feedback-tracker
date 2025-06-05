@@ -284,6 +284,55 @@ export class DatabaseStorage implements IStorage {
     return newQuestion;
   }
 
+  async getAvailableTopicsForDate(date: string): Promise<{ id: string; name: string; }[]> {
+    try {
+      const activeTopics = await db.select({
+        id: assessmentSchedules.topicId,
+        name: assessmentSchedules.topicName
+      })
+      .from(assessmentSchedules)
+      .where(
+        and(
+          eq(assessmentSchedules.assessmentDate, date),
+          eq(assessmentSchedules.isActive, true)
+        )
+      )
+      .orderBy(assessmentSchedules.topicId);
+
+      return activeTopics;
+    } catch (error) {
+      console.error("Error fetching available topics for date:", error);
+      return [];
+    }
+  }
+
+  async getQuestionsForAssessmentDate(date: string, topicId: string, count: number = 10): Promise<Question[]> {
+    try {
+      // First check if this topic is available for the specified date
+      const topicAvailable = await db.select()
+        .from(assessmentSchedules)
+        .where(
+          and(
+            eq(assessmentSchedules.assessmentDate, date),
+            eq(assessmentSchedules.topicId, topicId),
+            eq(assessmentSchedules.isActive, true)
+          )
+        )
+        .limit(1);
+
+      if (topicAvailable.length === 0) {
+        console.log(`Topic ${topicId} not available for date ${date}`);
+        return [];
+      }
+
+      // Get random questions for this topic
+      return await this.getRandomQuestionsByTopic(topicId, count);
+    } catch (error) {
+      console.error("Error fetching questions for assessment date:", error);
+      return [];
+    }
+  }
+
   async getAllFeedbackQuestions(): Promise<FeedbackQuestion[]> {
     const cacheKey = getCacheKey.feedbackQuestions();
     const cached = feedbackCache.get<FeedbackQuestion[]>(cacheKey);

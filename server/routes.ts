@@ -447,31 +447,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Assessment Control: Update date status
+  // Assessment Control: Update date status and topic associations
   app.put("/api/admin/assessment-control/dates", async (req, res) => {
     try {
       const datesSchema = z.object({
         dates: z.array(z.object({
           date: z.string(),
-          isActive: z.boolean()
+          isActive: z.boolean(),
+          topics: z.array(z.object({
+            id: z.string(),
+            name: z.string(),
+            isActive: z.boolean()
+          }))
         }))
       });
 
       const { dates } = datesSchema.parse(req.body);
       
-      // Update each date's status
+      // Update each date's status and topic associations
       for (const dateItem of dates) {
         await storage.updateAssessmentDateStatus(dateItem.date, dateItem.isActive);
+        
+        // Update topic associations for this date
+        for (const topic of dateItem.topics) {
+          await storage.updateDateTopicAssociation(dateItem.date, topic.id, topic.isActive);
+        }
       }
 
       // Clear assessment-related caches to ensure changes are reflected immediately
       assessmentCache.flushAll();
       cache.del(getCacheKey.assessmentDates());
       
-      console.log("Assessment date settings updated and cache cleared");
-      res.json({ success: true, message: "Date settings updated successfully" });
+      console.log("Assessment date and topic settings updated and cache cleared");
+      res.json({ success: true, message: "Assessment settings updated successfully" });
     } catch (error) {
-      console.error("Error updating assessment date settings:", error);
+      console.error("Error updating assessment settings:", error);
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid data", errors: error.errors });
       } else {
