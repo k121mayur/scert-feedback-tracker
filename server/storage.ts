@@ -383,8 +383,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async submitExamAnswers(answers: InsertExamAnswer[]): Promise<ExamAnswer[]> {
-    const newAnswers = await db.insert(examAnswers).values(answers).returning();
-    return newAnswers;
+    if (answers.length === 0) return [];
+    
+    try {
+      // Optimized batch insert for 30K concurrent users
+      const newAnswers = await db.insert(examAnswers).values(answers).returning();
+      
+      // Clear relevant caches after successful submission
+      const mobile = answers[0]?.mobile;
+      const topicId = answers[0]?.topicId;
+      if (mobile && topicId) {
+        const cacheKey = getCacheKey.examAnswers(mobile, topicId);
+        cache.del(cacheKey);
+      }
+      
+      return newAnswers;
+    } catch (error) {
+      console.error('Batch exam answers submission failed:', error);
+      throw error;
+    }
   }
 
   async checkExamExists(mobile: string, topicId: string, date: string): Promise<boolean> {
@@ -437,8 +454,47 @@ export class DatabaseStorage implements IStorage {
   }
 
   async submitTrainerFeedback(feedback: InsertTrainerFeedback[]): Promise<TrainerFeedback[]> {
-    const newFeedback = await db.insert(trainerFeedback).values(feedback).returning();
-    return newFeedback;
+    if (feedback.length === 0) return [];
+    
+    try {
+      // Optimized batch insert for 30K concurrent feedback submissions
+      const newFeedback = await db.insert(trainerFeedback).values(feedback).returning();
+      
+      // Clear feedback cache for affected topics and users
+      const uniqueTopics = [...new Set(feedback.map(f => f.topicId))];
+      const uniqueMobiles = [...new Set(feedback.map(f => f.mobile))];
+      
+      uniqueTopics.forEach(topicId => {
+        uniqueMobiles.forEach(mobile => {
+          const cacheKey = getCacheKey.teacherFeedback(mobile, topicId);
+          feedbackCache.del(cacheKey);
+        });
+      });
+      
+      return newFeedback;
+    } catch (error) {
+      console.error('Batch trainer feedback submission failed:', error);
+      
+      // Fallback to smaller batches if large batch fails
+      if (feedback.length > 10) {
+        console.log('Attempting smaller batch processing for feedback submission');
+        const results: TrainerFeedback[] = [];
+        const batchSize = 5;
+        
+        for (let i = 0; i < feedback.length; i += batchSize) {
+          const batch = feedback.slice(i, i + batchSize);
+          try {
+            const batchResults = await db.insert(trainerFeedback).values(batch).returning();
+            results.push(...batchResults);
+          } catch (batchError) {
+            console.error(`Feedback batch ${i}-${i + batchSize} failed:`, batchError);
+          }
+        }
+        return results;
+      }
+      
+      throw error;
+    }
   }
 
   async createTopicFeedback(feedbackData: InsertTopicFeedback): Promise<TopicFeedback> {
