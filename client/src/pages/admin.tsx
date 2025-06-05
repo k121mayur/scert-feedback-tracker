@@ -164,7 +164,8 @@ export default function Admin() {
       const datesWithTopics = await datesResponse.json();
       
       // Data now comes with topics already assigned to each date
-      setDateTopicMappings(datesWithTopics);
+      // Ensure it's always an array to prevent mapping errors
+      setDateTopicMappings(Array.isArray(datesWithTopics) ? datesWithTopics : []);
     } catch (error) {
       console.error("Error loading assessment data:", error);
       loadedRef.current = false;
@@ -206,17 +207,21 @@ export default function Admin() {
   const saveAssessmentChanges = async () => {
     setSaving(true);
     try {
-      // Save date settings
+      // Save date settings with safety checks
       await apiRequest('PUT', '/api/admin/assessment-control/dates', {
-        dates: dateTopicMappings.map(({ date, isActive }) => ({ date, isActive }))
+        dates: Array.isArray(dateTopicMappings) ? 
+          dateTopicMappings.filter(mapping => mapping?.date).map(({ date, isActive }) => ({ date, isActive })) : []
       });
 
-      // Save topic settings (flatten all topics)
-      const allTopics = dateTopicMappings.flatMap(mapping => mapping.topics);
+      // Save topic settings (flatten all topics) with safety checks
+      const allTopics = Array.isArray(dateTopicMappings) ? 
+        dateTopicMappings.flatMap(mapping => Array.isArray(mapping?.topics) ? mapping.topics : []) : [];
       const uniqueTopics = allTopics.reduce((acc: Topic[], topic) => {
-        const existing = acc.find(t => t.id === topic.id);
-        if (!existing) {
-          acc.push(topic);
+        if (topic && topic.id) {
+          const existing = acc.find(t => t.id === topic.id);
+          if (!existing) {
+            acc.push(topic);
+          }
         }
         return acc;
       }, []);

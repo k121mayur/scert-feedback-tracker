@@ -501,27 +501,50 @@ export class DatabaseStorage implements IStorage {
     averageScore: number;
     passRate: number;
   }> {
-    const [totalExamsResult] = await db
-      .select({ count: count() })
-      .from(examResults);
+    try {
+      const [totalExamsResult] = await db
+        .select({ count: count() })
+        .from(examResults);
 
-    const [avgScoreResult] = await db
-      .select({
-        avgScore: sql<number>`AVG(CAST(correct_count AS FLOAT) / CAST(total_questions AS FLOAT) * 100)`
-      })
-      .from(examResults);
+      const totalExams = totalExamsResult?.count || 0;
 
-    const [passRateResult] = await db
-      .select({
-        passRate: sql<number>`AVG(CASE WHEN CAST(correct_count AS FLOAT) / CAST(total_questions AS FLOAT) >= 0.6 THEN 1.0 ELSE 0.0 END) * 100`
-      })
-      .from(examResults);
+      // If no exams exist, return safe defaults
+      if (totalExams === 0) {
+        return {
+          totalExams: 0,
+          averageScore: 0,
+          passRate: 0,
+        };
+      }
 
-    return {
-      totalExams: totalExamsResult?.count || 0,
-      averageScore: Math.round((avgScoreResult?.avgScore || 0) * 10) / 10,
-      passRate: Math.round((passRateResult?.passRate || 0) * 10) / 10,
-    };
+      const [avgScoreResult] = await db
+        .select({
+          avgScore: sql<number>`COALESCE(AVG(CASE WHEN total_questions > 0 THEN CAST(correct_count AS FLOAT) / CAST(total_questions AS FLOAT) * 100 ELSE NULL END), 0)`
+        })
+        .from(examResults)
+        .where(sql`total_questions > 0`);
+
+      const [passRateResult] = await db
+        .select({
+          passRate: sql<number>`COALESCE(AVG(CASE WHEN total_questions > 0 AND CAST(correct_count AS FLOAT) / CAST(total_questions AS FLOAT) >= 0.6 THEN 1.0 ELSE 0.0 END) * 100, 0)`
+        })
+        .from(examResults)
+        .where(sql`total_questions > 0`);
+
+      return {
+        totalExams,
+        averageScore: Math.round((avgScoreResult?.avgScore || 0) * 10) / 10,
+        passRate: Math.round((passRateResult?.passRate || 0) * 10) / 10,
+      };
+    } catch (error) {
+      console.error("Error in getExamStats:", error);
+      // Return safe defaults in case of any database error
+      return {
+        totalExams: 0,
+        averageScore: 0,
+        passRate: 0,
+      };
+    }
   }
 
   async getFeedbackStats(): Promise<{
