@@ -51,7 +51,7 @@ export default function Exam() {
       
       // Use new API endpoint for date-based assessments
       if (parsedData.topicId) {
-        loadNewExamQuestions(parsedData.topicId);
+        loadNewExamQuestionsWithData(parsedData.topicId, parsedData.mobile);
       } else {
         loadQuestions(parsedData.mobile, parsedData.topic);
       }
@@ -130,6 +130,48 @@ export default function Exam() {
       }
 
       const response = await fetch(`/api/exam-questions/${topicId}?mobile=${examData.mobile}`);
+      const data = await response.json();
+
+      if (data.status === "error") {
+        toast({
+          title: "Error",
+          description: data.message,
+          variant: "destructive",
+        });
+        setLocation('/');
+        return;
+      }
+
+      setQuestions(data.questions);
+      setAnswers(new Array(data.questions.length).fill(null));
+      setExamStarted(true);
+      startTimer();
+    } catch (error) {
+      console.error("Error loading questions:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load questions. Please try again.",
+        variant: "destructive",
+      });
+      setLocation('/');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadNewExamQuestionsWithData = async (topicId: string, mobile: string) => {
+    try {
+      if (!mobile) {
+        toast({
+          title: "Error",
+          description: "Mobile number is required for authentication.",
+          variant: "destructive",
+        });
+        setLocation('/');
+        return;
+      }
+
+      const response = await fetch(`/api/exam-questions/${topicId}?mobile=${mobile}`);
       const data = await response.json();
 
       if (data.status === "error") {
