@@ -479,16 +479,54 @@ export class DatabaseStorage implements IStorage {
     averageRating: number;
     satisfactionRate: number;
   }> {
-    const [totalFeedbackResult] = await db
-      .select({ count: count() })
-      .from(trainerFeedback);
+    try {
+      const [totalFeedbackResult] = await db
+        .select({ count: count() })
+        .from(trainerFeedback);
 
-    // This is a simplified calculation - in a real scenario, you'd need to parse feedback ratings
-    return {
-      totalFeedback: totalFeedbackResult?.count || 0,
-      averageRating: 4.2, // Placeholder - would need proper rating calculation
-      satisfactionRate: 89.7, // Placeholder - would need proper satisfaction calculation
-    };
+      // Calculate average rating based on actual feedback responses
+      // Map Marathi responses to numeric values: असमाधानकारक=1, बरा=2, समाधानकारक=3, चांगला=4, उत्कृष्ट=5
+      const feedbackResponses = await db
+        .select({ feedback: trainerFeedback.feedback })
+        .from(trainerFeedback);
+
+      let totalRating = 0;
+      let validResponses = 0;
+
+      feedbackResponses.forEach(response => {
+        const feedback = response.feedback;
+        let rating = 0;
+        
+        if (feedback === 'असमाधानकारक') rating = 1;
+        else if (feedback === 'बरा') rating = 2;
+        else if (feedback === 'समाधानकारक') rating = 3;
+        else if (feedback === 'चांगला') rating = 4;
+        else if (feedback === 'उत्कृष्ट') rating = 5;
+        
+        if (rating > 0) {
+          totalRating += rating;
+          validResponses++;
+        }
+      });
+
+      const averageRating = validResponses > 0 ? totalRating / validResponses : 0;
+      const satisfactionRate = validResponses > 0 ? (feedbackResponses.filter(r => 
+        r.feedback === 'समाधानकारक' || r.feedback === 'चांगला' || r.feedback === 'उत्कृष्ट'
+      ).length / validResponses) * 100 : 0;
+
+      return {
+        totalFeedback: totalFeedbackResult?.count || 0,
+        averageRating: Math.round(averageRating * 10) / 10,
+        satisfactionRate: Math.round(satisfactionRate * 10) / 10,
+      };
+    } catch (error) {
+      console.error("Error calculating feedback stats:", error);
+      return {
+        totalFeedback: 0,
+        averageRating: 0,
+        satisfactionRate: 0,
+      };
+    }
   }
 
   async getTeacherFeedback(mobile: string): Promise<any[]> {
@@ -526,13 +564,15 @@ export class DatabaseStorage implements IStorage {
       const [teachersCount] = await db.select({ count: count() }).from(teachers);
       const [batchesCount] = await db.select({ count: count() }).from(batches);
       const [questionsCount] = await db.select({ count: count() }).from(questions);
-      const [assessmentDatesCount] = await db.select({ count: count() }).from(assessmentSchedules);
       
       // Get unique districts from teachers table
       const districts = await db.selectDistinct({ district: teachers.district }).from(teachers);
       
       // Get unique subjects from questions table
       const subjects = await db.selectDistinct({ topicId: questions.topicId }).from(questions);
+      
+      // Get unique assessment dates
+      const uniqueDates = await db.selectDistinct({ assessmentDate: assessmentSchedules.assessmentDate }).from(assessmentSchedules);
 
       return {
         totalTeachers: teachersCount?.count || 0,
@@ -540,7 +580,7 @@ export class DatabaseStorage implements IStorage {
         totalBatches: batchesCount?.count || 0,
         totalSubjects: subjects.length || 0,
         totalQuestions: questionsCount?.count || 0,
-        totalAssessmentDates: assessmentDatesCount?.count || 0,
+        totalAssessmentDates: uniqueDates.length || 0,
       };
     } catch (error) {
       console.error("Error fetching system stats:", error);
